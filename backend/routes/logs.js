@@ -28,7 +28,6 @@ async function postLogs(req, res) {
   let release;
 
   try {
-    // ensure file exists
     if (!(await fs.pathExists(LOG_FILE))) {
       await fs.outputFile(LOG_FILE, "[]");
     }
@@ -46,7 +45,6 @@ async function postLogs(req, res) {
 
     await release();
 
-    // 🔴 REAL-TIME EMIT
     if (req.io) req.io.emit("new_log", log);
 
     return res.status(201).json(log);
@@ -68,52 +66,69 @@ async function getLogs(req, res) {
     const logs = raw ? JSON.parse(raw) : [];
 
     let results = logs;
+
+    // Accept both sets of names: frontend uses 'search', 'from', 'to'
     const {
       level,
       message,
+      search,
       resourceId,
+      from,
+      to,
       timestamp_start,
       timestamp_end,
       traceId,
       spanId,
       commit,
+      caseSensitive,
     } = req.query;
 
-    // level filter (multi-select)
+    const msgFilter = search || message;
+    const start = from || timestamp_start;
+    const end = to || timestamp_end;
+
+    // Level filter (allow comma-separated multiple levels)
     if (level) {
-      const levels = level.split(",");
+      const levels = String(level).split(",").map((s) => s.trim());
       results = results.filter((l) => levels.includes(l.level));
     }
 
-    // resourceId filter
+    // resourceId filter (case-insensitive substring match)
     if (resourceId) {
+      const r = String(resourceId).toLowerCase();
       results = results.filter((l) =>
-        l.resourceId.toLowerCase().includes(resourceId.toLowerCase())
+        (l.resourceId || "").toLowerCase().includes(r)
       );
     }
 
-    // message full-text (CASE-SENSITIVE as you asked)
-    if (message) {
-      const safe = message.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(safe);
-      results = results.filter((l) => regex.test(l.message));
+    // message search: respect caseSensitive flag
+    if (msgFilter) {
+      // escape regex special chars
+      const safe = String(msgFilter).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const flags = caseSensitive && (caseSensitive === "1" || caseSensitive === "true") ? "" : "i";
+      const regex = new RegExp(safe, flags);
+      results = results.filter((l) => regex.test(String(l.message || "")));
     }
 
     if (traceId) results = results.filter((l) => l.traceId === traceId);
     if (spanId) results = results.filter((l) => l.spanId === spanId);
     if (commit) results = results.filter((l) => l.commit === commit);
 
-    // time range
-    if (timestamp_start || timestamp_end) {
+    // time range: parse start/end as Date; support ISO or local-ISO converted by frontend
+    if (start || end) {
+      const startTime = start ? new Date(start).getTime() : null;
+      const endTime = end ? new Date(end).getTime() : null;
+
       results = results.filter((l) => {
         const t = new Date(l.timestamp).getTime();
-        if (timestamp_start && t < new Date(timestamp_start).getTime()) return false;
-        if (timestamp_end && t > new Date(timestamp_end).getTime()) return false;
+        if (Number.isNaN(t)) return false; // invalid timestamp in log -> skip
+        if (startTime && t < startTime) return false;
+        if (endTime && t > endTime) return false;
         return true;
       });
     }
 
-    // reverse chronological
+    // newest first
     results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     return res.json(results);

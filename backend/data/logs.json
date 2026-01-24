@@ -34,5 +34,81 @@
     "metadata": {
       "env": "prod"
     }
+  },
+  {
+    "level": "error",
+    "message": "Database connection failed",
+    "resourceId": "server-1234",
+    "timestamp": "2025-01-24T12:00:00Z",
+    "traceId": "trace-001",
+    "spanId": "span-001",
+    "commit": "abc123",
+    "metadata": {
+      "env": "prod"
+    }
+  },
+  {
+    "level": "error",
+    "message": "DB crash",
+    "resourceId": "srv-1",
+    "timestamp": "2025-01-24T12:00:00Z",
+    "traceId": "t1",
+    "spanId": "s1",
+    "commit": "c1",
+    "metadata": {}
+  },
+  {
+    "level": "info",
+    "message": "SOCKET LIVE TEST",
+    "resourceId": "srv-9",
+    "timestamp": "2026-01-24T11:33:52.644Z",
+    "traceId": "t-rt",
+    "spanId": "s-rt",
+    "commit": "c-rt",
+    "metadata": {}
+  },
+  {
+    "level": "error",
+    "message": "DB connection failed",
+    "resourceId": "server-1",
+    "timestamp": "2026-01-24T12:29:34.466Z",
+    "traceId": "t-1769257773058",
+    "spanId": "s-966",
+    "commit": "dev",
+    "metadata": {}
+  },
+  {
+    "level": "warn",
+    "message": "High memory usage detected",
+    "resourceId": "server-22",
+    "timestamp": "2025-01-24T15:10:00Z",
+    "traceId": "trace-warn-1",
+    "spanId": "span-warn-1",
+    "commit": "commit-warn-1",
+    "metadata": {
+      "memory": "92%"
+    }
+  },
+  {
+    "level": "debug",
+    "message": "Cache miss for user profile",
+    "resourceId": "server-33",
+    "timestamp": "2025-01-24T15:12:00Z",
+    "traceId": "trace-debug-1",
+    "spanId": "span-debug-1",
+    "commit": "commit-debug-1",
+    "metadata": {
+      "cache": "user-profile"
+    }
+  },
+  {
+    "level": "info",
+    "message": "Log from Web CLI",
+    "resourceId": "web-cli",
+    "timestamp": "2026-01-24T13:38:49.839Z",
+    "traceId": "9564707e-1ab3-4396-bc98-ac9b4f5a06c2",
+    "spanId": "cli",
+    "commit": "web",
+    "metadata": {}
   }
 ]

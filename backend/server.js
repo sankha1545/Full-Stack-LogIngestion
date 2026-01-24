@@ -7,6 +7,9 @@ const { postLogs, getLogs } = require("./routes/logs");
 
 const app = express();
 const server = http.createServer(app);
+const { execCommand } = require("./routes/cli");
+
+app.post("/cli/exec", execCommand);
 
 // ------------------ SOCKET.IO ------------------
 const io = new Server(server, {

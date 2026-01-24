@@ -29,7 +29,8 @@ export default function LogItem({ log }) {
 
   return (
     <div
-      className={`flex gap-3 p-4 rounded-md transition hover:bg-slate-100 dark:hover:bg-slate-800 ${colorClass}`}
+      className={`flex gap-3 p-4 rounded-md overflow-hidden transition hover:bg-slate-100 dark:hover:bg-slate-800 ${colorClass}`}
+
     >
       {/* Content */}
       <div className="flex-1">
