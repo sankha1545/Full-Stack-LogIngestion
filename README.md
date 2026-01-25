@@ -80,9 +80,9 @@ The main control center where logs are streamed, filtered, and inspected in real
 
 ### 📈 Analytics View
 Provides visual insights such as log counts by level and real-time trend analysis.
-**DARK MODE**
-![Analytics](images/analytics-light.png)
 **LIGHT MODE**
+![Analytics](images/analytics-light.png)
+**DARK MODE**
 ![Analytics](images/analytics-dark.png)
 
 ### 🖥️ Terminal UI (Future Scope)
