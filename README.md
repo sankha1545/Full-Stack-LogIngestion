@@ -67,9 +67,9 @@ It allows developers to send logs from any service, persist them in a JSON file,
 Replace these with your screenshots:
 
 ```text
-/docs/screenshots/dashboard.png
-/docs/screenshots/filters.png
-/docs/screenshots/analytics.png
+/images/DESIGN (1)
+/images/DESIGN (2)
+/images/DESIGN (3)
 ```
 
 <a id="monorepo-structure"></a>
