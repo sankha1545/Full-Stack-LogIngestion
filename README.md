@@ -318,7 +318,7 @@ cd log-ingestion
 | Frontend   | http://localhost:5173       |
 | Backend API| http://localhost:3001/logs  |
 
-### 2️⃣ Docker (Recommended)
+### 2️⃣ Docker 
 ```
 docker compose up --build
 
@@ -394,20 +394,145 @@ results.filter(log =>
 
 ```
 <a id="cicd"></a>
-## 🔁 CI/CD Pipeline
-```
+
+## 🔁 CI/CD Pipeline (GitHub Actions + Docker Hub)
+
+This project uses **GitHub Actions** to automatically build, test, and deploy the application whenever code is pushed to the `main` branch.
+
+The pipeline:
+- Builds **Frontend** and **Backend** Docker images
+- Tags them with `latest`
+- Pushes them to **Docker Hub**
+- Can be extended for cloud deployment (AWS, GCP, etc.)
+
+---
+
+## 📌 Workflow Trigger
+
+The pipeline runs automatically when:
+
+```txt
+
 Trigger: push to main
 
-Builds backend + frontend
-
-Pushes images to Docker Hub
 ```
-### GitHub Secrets
+### 🔐 GitHub Secrets Setup
+To keep credentials secure, Docker Hub credentials are stored in GitHub Secrets.
+
+#### Required Secrets
 ```
 DOCKER_USERNAME
 DOCKER_PASSWORD
 
 ```
+### 🧾 Step 1: Create Docker Hub Access Token (Recommended)
+
+Instead of using your real Docker password, generate a Docker Hub Access Token.
+
+### 🔹 How to Generate Docker Hub Token
+
+1) Go to: https://hub.docker.com/
+
+2) Login → Click your profile (top right)
+
+3) Open Account Settings
+
+4) Go to Security
+
+5) Click New Access Token
+
+6) Give it a name (e.g. github-ci)
+
+7) Set permission: Read, Write
+
+8) Click Generate
+
+9) Copy the token (you will see it only once)
+
+### 🧾 Step 2: Add Secrets to GitHub
+1. Open your GitHub repository
+2. Go to Settings → Secrets and variables → Actions
+3. Click New repository secret
+4. Add:
+
+
+--------------
+
+## 📄 docker-ci.yml (GitHub Actions Workflow)
+Create this file:
+```
+.github/workflows/docker-ci.yml
+
+```
+### docker-ci.yml
+```
+name: LogScope CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Backend Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/logscope-backend:latest ./backend
+
+      - name: Build Frontend Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/logscope-frontend:latest ./frontend
+
+      - name: Push Backend Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/logscope-backend:latest
+
+      - name: Push Frontend Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/logscope-frontend:latest
+
+```
+### How to Test the CI/CD Pipeline
+1. Make any small change in code
+2. Commit and push to main
+
+```
+git add .
+git commit -m "trigger ci"
+git push origin main
+
+```
+3. Go to **GitHub → Actions**
+4. Click the running workflow
+5. Watch logs for:
+- Docker build
+- Docker login
+- Docker push
+
+-----
+### Result
+ After success, your images will be available on Docker Hub:
+ 
+ ```
+ docker pull <your-username>/logscope-backend:latest
+docker pull <your-username>/logscope-frontend:latest
+
+ ```
+
+
+
 ------
 <a id="dev"></a>
 ## 🛠 Development (without Docker)
