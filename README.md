@@ -311,7 +311,7 @@ This project uses modern libraries for real-time communication, UI, validation, 
 ### 1️⃣ Clone
 ```
 git clone https://github.com/your-username/logscope.git
-cd logscope
+cd log-ingestion
 ```
 | Service     | URL                         |
 |------------|-----------------------------|
