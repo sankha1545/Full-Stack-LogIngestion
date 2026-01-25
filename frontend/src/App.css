@@ -44,3 +44,13 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+.quick-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.quick-btn:hover {
+  background: #c7d2fe;
+}
