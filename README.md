@@ -90,7 +90,10 @@ An experimental command-based interface that will allow users to query and analy
 ![Terminal UI](images/terminal.png)
 
 
+-----
+
 <a id="architecture-diagram">
+  
 ## Architecture Diagram
 ![Terminal UI](images/architecture-diagram.png)
 
