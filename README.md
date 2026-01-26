@@ -27,7 +27,7 @@ It allows developers to send logs from any service, persist them in a JSON file,
 - [Docker Architecture](#docker-architecture)
 - [CI/CD Pipeline](#cicd)
 - [Development (without Docker)](#dev)
-- [Example Test](#example-test)
+- [Example Test](#testing)
 - [Tech Stack](#tech-stack)
 - [Design Decisions](#design-decisions)
 - [Terminal UI (Future Scope)](#terminal-ui)
@@ -551,14 +551,129 @@ npm install
 npm run dev
 
 ```
-<a id="example-test"></a>
-## 🧪 Example Test
+<a id="testing"></a>
+## 🧪 Testing (How a Beginner Uses LogScope)
+
+This section explains how a **beginner** can send logs and see them live in LogScope.
+
+Think of LogScope as a **live monitor for your app logs**.
+
+---
+
+### Step 1: Start LogScope
+
+Make sure LogScope is running:
+
+```bash
+docker compose up --build
 ```
-curl -X POST http://localhost:3001/logs \
--H "Content-Type: application/json" \
--d '{...}'
+## 🌐 Open the Dashboard
+
+| Service   | URL                           |
+|-----------|-------------------------------|
+| Dashboard | http://localhost:5173         |
+| Log API   | http://localhost:3001/logs    |
+
+### Step 2: Send a Test Log (Linux / macOS / Git Bash)
 
 ```
+curl -X POST http://localhost:3001/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "level": "error",
+    "message": "Database connection failed",
+    "resourceId": "server-1",
+    "timestamp": "2026-01-24T12:29:34.466Z",
+    "traceId": "t-1001",
+    "spanId": "s-2001",
+    "commit": "main",
+    "metadata": { "host": "prod" }
+  }'
+
+```
+### Expected Response
+{
+  "level": "error",
+  "message": "Database connection failed",
+  "resourceId": "server-1",
+  "timestamp": "2026-01-24T12:29:34.466Z",
+  "traceId": "t-1001",
+  "spanId": "s-2001",
+  "commit": "main",
+  "metadata": { "host": "prod" }
+}
+
+------
+
+### Step 3: Send a Test Log (Windows PowerShell)
+```
+curl -Method POST http://localhost:3001/logs `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '{
+    "level": "error",
+    "message": "Database connection failed",
+    "resourceId": "server-1",
+    "timestamp": "2026-01-24T12:29:34.466Z",
+    "traceId": "t-1001",
+    "spanId": "s-2001",
+    "commit": "main",
+    "metadata": { "host": "prod" }
+  }'
+```
+----
+### Step 4: Verify Logs in the UI
+1. Open: http://localhost:5173
+2. Set filters:
+    - **Level:** error
+    - **Resource:** server-1
+
+3. You should see:
+  Database connection failed
+
+appear 
+
+appear instantly without refreshing.
+
+----
+
+### Step 5: Verify Logs via API
+Get all logs:
+```
+curl http://localhost:3001/logs
+
+```
+Filter by level:
+
+```
+curl "http://localhost:3001/logs?level=error"
+
+```
+Filter by message:
+
+```
+curl "http://localhost:3001/logs?message=database"
+
+```
+Filter by resource:
+
+```
+curl "http://localhost:3001/logs?resourceId=server-1"
+
+```
+Filter by date:
+```
+curl "http://localhost:3001/logs?from=2026-01-24T00:00:00Z&to=2026-01-25T00:00:00Z"
+
+```
+---
+### What This Confirms
+- Log ingestion works
+- Real-time streaming works
+- Filters work
+- UI is connected to backend
+
+---
+
 <a id="tech-stack"></a>
 ## 🧩 Tech Stack
 
