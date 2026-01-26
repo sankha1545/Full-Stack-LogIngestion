@@ -1,4 +1,4 @@
-export default function LogItem({ log }) {
+export default function LogItem({ log, onClick }) {
   const levelColors = {
     error: "border-l-4 border-red-500 bg-red-50/10",
     warn: "border-l-4 border-yellow-500 bg-yellow-50/10",
@@ -27,7 +27,6 @@ export default function LogItem({ log }) {
   const colorClass = levelColors[log.level] || levelColors.debug;
   const badgeClass = (levelStyles[log.level] || levelStyles.debug).badge;
 
-  /* UTC → IST formatter */
   function formatIST(utc) {
     const d = new Date(utc);
     return d.toLocaleString("en-IN", {
@@ -44,7 +43,10 @@ export default function LogItem({ log }) {
 
   return (
     <div
-      className={`flex gap-3 p-4 rounded-md overflow-hidden transition hover:bg-slate-100 dark:hover:bg-slate-800 ${colorClass}`}
+      onClick={() => onClick?.(log)}
+      className={`flex gap-3 p-4 rounded-md overflow-hidden transition cursor-pointer
+      hover:shadow-md hover:scale-[1.01] hover:bg-slate-100 dark:hover:bg-slate-800
+      ${colorClass}`}
     >
       <div className="flex-1">
         {/* Top row */}
