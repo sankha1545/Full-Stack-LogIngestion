@@ -592,6 +592,7 @@ curl -X POST http://localhost:3001/logs \
 
 ```
 ### Expected Response
+```
 {
   "level": "error",
   "message": "Database connection failed",
@@ -602,6 +603,7 @@ curl -X POST http://localhost:3001/logs \
   "commit": "main",
   "metadata": { "host": "prod" }
 }
+```
 
 ------
 
@@ -717,7 +719,7 @@ logToLogScope("error", "DB connection failed", "db-service");
 ```
 Now your application is **connected to LogScope 🎉**
 Every time this function runs, the log will appear live in the dashboard.
----
+------
 
 <a id="tech-stack"></a>
 ## 🧩 Tech Stack
