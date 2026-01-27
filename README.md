@@ -90,6 +90,11 @@ Provides visual insights such as log counts by level and real-time trend analysi
 An experimental command-based interface that will allow users to query and analyze logs using CLI-style commands.
 ![Terminal UI](images/terminal.png)
 
+### 🪟 Modal View (Log Details)
+Displays the complete structured log data when a user clicks on any log entry.  
+This view allows deep inspection of logs without leaving the dashboard.
+ 
+![Modal](images/ModalView.png)
 
 -----
 
