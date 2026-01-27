@@ -717,8 +717,7 @@ logToLogScope("info", "User logged in", "auth-service");
 logToLogScope("error", "DB connection failed", "db-service");
 
 ```
-Now your application is **connected to LogScope 🎉**
-Every time this function runs, the log will appear live in the dashboard.
+
 ------
 
 <a id="tech-stack"></a>
