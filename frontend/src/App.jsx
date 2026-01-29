@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import WebCLI from "./components/WebCLI/WebCLI";
+
 
 export default function App() {
   const [theme, setTheme] = useState("dark");
@@ -9,6 +9,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    console.log("API URL:", import.meta.env.VITE_API_URL);
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
@@ -72,8 +73,8 @@ export default function App() {
         </main>
       </div>
 
-      {/* GLOBAL WEB TERMINAL */}
-      <WebCLI open={terminalOpen} onClose={() => setTerminalOpen(false)} />
+    
+     
     </div>
   );
 }

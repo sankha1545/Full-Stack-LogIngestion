@@ -1,15 +1,12 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "LogScope backend",
+  "main": "server.js",
   "scripts": {
-  "start": "node server.js"
-},
-
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+    "start": "node server.js",
+    "test": "jest --runInBand"
+  },
   "type": "commonjs",
   "dependencies": {
     "cors": "^2.8.6",
@@ -18,5 +15,9 @@
     "proper-lockfile": "^4.1.2",
     "socket.io": "^4.8.3",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
   }
 }

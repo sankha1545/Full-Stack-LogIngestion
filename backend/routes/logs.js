@@ -1,23 +1,36 @@
 const { z } = require("zod");
 const fs = require("fs-extra");
 const path = require("path");
-const lockfile = require("proper-lockfile");
+const readline = require("readline");
 
-const LOG_FILE = path.join(__dirname, "../data/logs.json");
+const LOG_FILE = path.join(__dirname, "../data/logs.ndjson");
 
 /* ----------- SCHEMA ----------- */
 const LogSchema = z.object({
   level: z.enum(["error", "warn", "info", "debug"]),
   message: z.string().min(1),
   resourceId: z.string().min(1),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime(), // ISO 8601 UTC
   traceId: z.string().min(1),
   spanId: z.string().min(1),
   commit: z.string().min(1),
   metadata: z.record(z.any()),
 });
 
-/* ----------- POST /logs ----------- */
+/* ----------- QUERY SCHEMA ----------- */
+const QuerySchema = z.object({
+  level: z.string().optional(),
+  search: z.string().optional(),
+  resourceId: z.string().optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  traceId: z.string().optional(),
+  spanId: z.string().optional(),
+  commit: z.string().optional(),
+  caseSensitive: z.enum(["true", "false"]).optional(),
+});
+
+/* ----------- POST /logs (NDJSON) ----------- */
 async function postLogs(req, res) {
   const parsed = LogSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -25,132 +38,90 @@ async function postLogs(req, res) {
   }
 
   const log = parsed.data;
-  let release;
 
   try {
-    if (!(await fs.pathExists(LOG_FILE))) {
-      await fs.outputFile(LOG_FILE, "[]");
-    }
+    await fs.ensureFile(LOG_FILE);
+    await fs.appendFile(LOG_FILE, JSON.stringify(log) + "\n");
 
-    release = await lockfile.lock(LOG_FILE, { retries: 5 });
-
-    const raw = await fs.readFile(LOG_FILE, "utf-8");
-    const logs = raw ? JSON.parse(raw) : [];
-
-    logs.push(log);
-
-    const temp = LOG_FILE + ".tmp";
-    await fs.writeFile(temp, JSON.stringify(logs, null, 2));
-    await fs.rename(temp, LOG_FILE);
-
-    await release();
-
-    // real-time emit
     if (req.io) req.io.emit("new_log", log);
-
     return res.status(201).json(log);
   } catch (err) {
-    if (release) await release();
-    console.error("Write failed:", err);
     return res.status(500).json({ error: "Failed to save log" });
   }
 }
 
-/* ----------- GET /logs ----------- */
+/* ----------- GET /logs (STREAMING) ----------- */
 async function getLogs(req, res) {
   try {
-    if (!(await fs.pathExists(LOG_FILE))) {
-      return res.json([]);
+    const parsedQuery = QuerySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      return res.status(400).json({ error: parsedQuery.error.format() });
     }
-
-    const raw = await fs.readFile(LOG_FILE, "utf-8");
-    const logs = raw ? JSON.parse(raw) : [];
-
-    let results = logs;
 
     const {
       level,
-      message,
       search,
       resourceId,
       from,
       to,
-      timestamp_start,
-      timestamp_end,
       traceId,
       spanId,
       commit,
       caseSensitive,
-    } = req.query;
+    } = parsedQuery.data;
 
-    const msgFilter = search || message;
-    const startRaw = from || timestamp_start;
-    const endRaw = to || timestamp_end;
-
-    console.log("====== DATE FILTER DEBUG ======");
-console.log("FROM RAW:", startRaw);
-console.log("TO RAW:", endRaw);
-
-    /* -------- LEVEL FILTER -------- */
-    if (level) {
-      const levels = String(level).split(",").map((s) => s.trim());
-      results = results.filter((l) => levels.includes(l.level));
+    if (from && to && new Date(from) > new Date(to)) {
+      return res.status(400).json({ error: "`from` cannot be after `to`" });
     }
 
-    /* -------- RESOURCE ID FILTER -------- */
-    if (resourceId) {
-      const r = String(resourceId).toLowerCase();
-      results = results.filter((l) =>
-        String(l.resourceId || "").toLowerCase().includes(r)
-      );
+    if (!(await fs.pathExists(LOG_FILE))) {
+      return res.json([]);
     }
 
-    /* -------- MESSAGE SEARCH -------- */
-    if (msgFilter) {
-      const safe = String(msgFilter).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const flags =
-        caseSensitive === "1" || caseSensitive === "true" ? "" : "i";
-      const regex = new RegExp(safe, flags);
+    const startTime = from ? new Date(from).getTime() : null;
+    const endTime = to ? new Date(to).getTime() : Date.now();
 
-      results = results.filter((l) =>
-        regex.test(String(l.message || ""))
-      );
+    const results = [];
+    const stream = fs.createReadStream(LOG_FILE);
+    const rl = readline.createInterface({ input: stream });
+
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      const log = JSON.parse(line);
+
+      /* -------- FILTERS -------- */
+      if (level) {
+        const levels = level.split(",").map((s) => s.trim());
+        if (!levels.includes(log.level)) continue;
+      }
+
+      if (resourceId) {
+        if (!log.resourceId.toLowerCase().includes(resourceId.toLowerCase()))
+          continue;
+      }
+
+      if (search) {
+        const safe = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const flags = caseSensitive === "true" ? "" : "i";
+        const regex = new RegExp(safe, flags);
+        if (!regex.test(log.message)) continue;
+      }
+
+      if (traceId && log.traceId !== traceId) continue;
+      if (spanId && log.spanId !== spanId) continue;
+      if (commit && log.commit !== commit) continue;
+
+      const t = new Date(log.timestamp).getTime();
+      if (Number.isNaN(t)) continue;
+      if (startTime && t < startTime) continue;
+      if (endTime && t > endTime) continue;
+
+      results.push(log);
     }
 
-    if (traceId) results = results.filter((l) => l.traceId === traceId);
-    if (spanId) results = results.filter((l) => l.spanId === spanId);
-    if (commit) results = results.filter((l) => l.commit === commit);
-
-    /* -------- TIME RANGE FILTER (FIXED) -------- */
-/* -------- TIME RANGE FILTER (FINAL FIX) -------- */
-if (startRaw || endRaw) {
-  const startTime = startRaw ? new Date(startRaw).getTime() : null;
-  const endTime = endRaw
-    ? new Date(endRaw).getTime() + 59_999
-    : null;
-
-  console.log("PARSED FROM:", startTime);
-  console.log("PARSED TO:", endTime);
-
-  results = results.filter((l) => {
-    const t = new Date(l.timestamp).getTime();
-    if (Number.isNaN(t)) return false;
-
-    if (startTime !== null && t < startTime) return false;
-    if (endTime !== null && t > endTime) return false;
-
-    return true;
-  });
-}
-
-
-
-    /* -------- SORT NEWEST FIRST -------- */
     results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
     return res.json(results);
   } catch (err) {
-    console.error("Read failed:", err);
     return res.status(500).json({ error: "Failed to read logs" });
   }
 }

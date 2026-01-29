@@ -173,32 +173,32 @@ This section helps beginners quickly learn the stack used in **LogScope**.
 
 ```bash
 log-ingestion/
+│
 ├── .github/
 │   └── workflows/
 │       └── docker-ci.yml
 │
-├── docker-ci.yml
-├── docker-compose.yml
-│
 ├── backend/
 │   ├── data/
-│   │   └── logs.json
-│   │
-│   ├── node_modules/
+│   │   ├── logs.json
+│   │   └── logs.ndjson
 │   │
 │   ├── routes/
 │   │   └── logs.js
 │   │
-│   ├── docs/
-│   │   └── apidocgen.md
+│   ├── scripts/
+│   │   └── migrate.js
 │   │
+│   ├── tests/
+│   │   └── logs.test.js
+│   │
+│   ├── server.js
 │   ├── Dockerfile
 │   ├── package.json
 │   ├── package-lock.json
-│   └── server.js
+│   └── .dockerignore
 │
 ├── frontend/
-│   ├── node_modules/
 │   ├── public/
 │   │   └── vite.svg
 │   │
@@ -206,60 +206,40 @@ log-ingestion/
 │   │   ├── api/
 │   │   │   └── logsApi.js
 │   │   │
-│   │   ├── assets/
-│   │   │   └── react.svg
+│   │   ├── services/
+│   │   │   └── socket.js
 │   │   │
 │   │   ├── components/
-│   │   │   ├── FilterBar/
-│   │   │   │   └── FilterBar.jsx
-│   │   │   │
-│   │   │   ├── LogChart/
-│   │   │   │   └── LogChart.jsx
-│   │   │   │
-│   │   │   ├── LogsList/
-│   │   │   │   └── LogsList.jsx
-│   │   │   │
-│   │   │   ├── LogsPanel/
-│   │   │   │   └── LogsPanel.jsx
-│   │   │   │
-│   │   │   ├── WebUI/
-│   │   │   │   └── WebUI.jsx
-│   │   │   │
-│   │   │   └── sidebar.jsx
+│   │   │   ├── FilterBar.jsx
+│   │   │   ├── LogChart.jsx
+│   │   │   ├── LogItem.jsx
+│   │   │   ├── LogsList.jsx
+│   │   │   ├── LogsPanel.jsx
+│   │   │   └── Sidebar.jsx
 │   │   │
 │   │   ├── hooks/
 │   │   │   └── useLogs.js
 │   │   │
-│   │   ├── layout/
-│   │   │   └── shell.jsx
-│   │   │
 │   │   ├── pages/
+│   │   │   ├── Analytics.jsx
 │   │   │   └── Dashboard.jsx
 │   │   │
-│   │   ├── services/
-│   │   │   └── socket.js
-│   │   │
-│   │   ├── styles/
-│   │   │   └── app.css
-│   │   │
+│   │   ├── assets/
 │   │   ├── App.jsx
-│   │   ├── App.css
-│   │   ├── index.css
-│   │   └── main.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
 │   │
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── .dockerignore
-│   ├── .gitignore
-│   ├── eslint.config.js
 │   ├── index.html
+│   ├── nginx.conf
+│   ├── Dockerfile
+│   ├── vite.config.js
 │   ├── package.json
 │   ├── package-lock.json
-│   ├── postcss.config.js
-│   ├── tailwind.config.js
-│   └── vite.config.js
+│   └── .dockerignore
 │
-└── README.md
+├── docker-compose.yml
+├── README.md
+└── .gitignore
 ```
 <a id="project-dependencies"></a>
 ## 📦 Project Dependencies
@@ -722,6 +702,120 @@ logToLogScope("info", "User logged in", "auth-service");
 logToLogScope("error", "DB connection failed", "db-service");
 
 ```
+## 🤖 Automated Testing (Jest + Supertest)
+
+LogScope also includes a **minimal automated test suite** to validate the backend API.
+
+These tests ensure that:
+- Invalid logs are rejected
+- Valid logs are accepted
+- Filters work correctly
+- Time range filtering behaves as expected
+
+The tests are written using:
+- **Jest** → test runner
+- **Supertest** → HTTP request simulation for Express
+
+---
+
+### Test Location
+
+All tests are located at:
+
+```
+backend/tests/logs.test.js
+
+```
+
+---
+
+### What Is Being Tested?
+
+The test suite covers:
+
+#### 1. POST /logs
+- Rejects invalid payload
+- Accepts valid structured log
+
+#### 2. GET /logs
+- Filters by log level
+- Filters by date range
+
+These are **integration tests**, meaning they test the real API routes end-to-end.
+
+---
+
+### How to Run the Tests
+
+Go to the backend directory:
+
+```bash
+cd backend
+```
+Install dependencies (if not already installed):
+
+```
+npm install
+
+```
+Run tests:
+
+```
+npm test
+
+```
+----
+**Expected Output**
+```
+PASS tests/logs.test.js
+ POST /logs
+   ✓ should reject invalid payload
+   ✓ should accept valid log
+ GET /logs
+   ✓ should filter by level
+   ✓ should filter by date range
+
+Test Suites: 1 passed, 1 total
+Tests: 4 passed, 4 total
+
+```
+----
+**How the Tests Work Internally**
+Before each test, the log storage file is reset:
+
+```
+beforeEach(async () => {
+  await fs.outputFile(LOG_FILE, "");
+});
+
+```
+This ensures:
+
+- Each test runs on a clean dataset
+
+- No previous logs affect the results
+
+- Tests are deterministic and isolated
+----
+**Why This Is Important**
+These tests prove that:
+
+- The API behaves correctly
+
+- Validation logic works
+
+- NDJSON storage works
+
+- Filtering logic is reliable
+
+- This makes LogScope production-ready and testable.
+
+### Manual vs Automated Testing
+
+| Type                | Purpose                          |
+|---------------------|----------------------------------|
+| Manual (curl / UI)  | For beginners and demos          |
+| Automated (Jest)    | For regression testing and CI    |
 
 ------
 

@@ -1,16 +1,11 @@
-const BASE_URL = "http://localhost:3001";
+const BASE_URL = import.meta.env.VITE_API_URL;
 
-/**
- * Normalize filter values safely.
- * from/to should already be ISO strings ending with Z.
- * Do NOT reconvert or shift time.
- */
+
 function normalizeValue(key, value) {
   if (!value) return null;
   if (key === "from" || key === "to") return value; // already ISO
   return String(value);
 }
-
 
 export async function fetchLogs(filters = {}, signal) {
   const params = new URLSearchParams();
@@ -19,7 +14,7 @@ export async function fetchLogs(filters = {}, signal) {
     const norm = normalizeValue(key, value);
     if (norm !== null && norm !== undefined && norm !== "") {
       if (key === "caseSensitive") {
-        params.append("caseSensitive", value ? "1" : "0");
+        params.append("caseSensitive", value ? "true" : "false");
       } else {
         params.append(key, norm);
       }
