@@ -7,22 +7,20 @@ const app = express();
 app.disable("etag");
 
 app.use(cors({
-  origin: [
-    "http://localhost",
-    "http://localhost:5173",
-  ],
+  origin: "*",
   methods: ["GET", "POST"],
-  credentials: true,
 }));
 
 app.use(express.json());
 
-// Routes
-const { postLogs, getLogs } = require("./routes/logs");
-app.post("/logs", postLogs);
-app.get("/logs", getLogs);
+// ---- ROUTES (NAMESPACED) ----
+const logsRouter = require("./routes/logs");
+app.use("/api", logsRouter);   // <<<<< THIS IS THE FIX
 
-// Only create server + socket when NOT testing
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 let server;
 let io;
 
@@ -30,17 +28,14 @@ if (process.env.NODE_ENV !== "test") {
   server = http.createServer(app);
 
   io = new Server(server, {
+    path: "/socket.io",
     cors: {
-      origin: [
-        "http://localhost",
-        "http://localhost:5173",
-      ],
+      origin: "*",
       methods: ["GET", "POST"],
     },
-    transports: ["websocket"],
+    transports: ["polling", "websocket"],
   });
 
-  // Make io available to routes
   app.set("io", io);
 
   io.on("connection", (socket) => {
@@ -56,5 +51,4 @@ if (process.env.NODE_ENV !== "test") {
   });
 }
 
-// Export app for tests
 module.exports = app;

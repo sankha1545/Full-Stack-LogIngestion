@@ -1,6 +1,15 @@
 import { io } from "socket.io-client";
 
-export const socket = io("/", {
-  path: "/socket.io",
-  transports: ["websocket"],
-});
+let socket;
+
+export function getSocket() {
+  if (!socket) {
+    socket = io({
+      path: "/socket.io",
+      transports: ["websocket"],
+      upgrade: false,
+      reconnection: true,
+    });
+  }
+  return socket;
+}

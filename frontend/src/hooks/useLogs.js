@@ -1,27 +1,36 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { fetchLogs } from "../api/logsApi";
-import { socket } from "../services/socket";
+import { getSocket } from "../services/socket";
 
 /* ---------- Pure Filter Matcher ---------- */
 function matchesFilters(log, filters = {}) {
   const logTime = new Date(log.timestamp).getTime();
   if (Number.isNaN(logTime)) return false;
 
-  if (filters.level && filters.level !== "" && log.level !== filters.level)
+  // Level filter
+  if (filters.level && filters.level !== "" && log.level !== filters.level) {
     return false;
-
-  if (filters.resourceId && filters.resourceId !== "") {
-    const r = String(filters.resourceId).toLowerCase();
-    if (!String(log.resourceId || "").toLowerCase().includes(r)) return false;
   }
 
+  // Resource filter
+  if (filters.resourceId && filters.resourceId !== "") {
+    const r = String(filters.resourceId).toLowerCase();
+    if (!String(log.resourceId || "").toLowerCase().includes(r)) {
+      return false;
+    }
+  }
+
+  // Message search
   if (filters.search && filters.search !== "") {
     const pattern = String(filters.search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const flags = filters.caseSensitive ? "" : "i";
     const re = new RegExp(pattern, flags);
-    if (!re.test(String(log.message || ""))) return false;
+    if (!re.test(String(log.message || ""))) {
+      return false;
+    }
   }
 
+  // Time range
   if (filters.from) {
     const fromTime = new Date(filters.from).getTime();
     if (!Number.isNaN(fromTime) && logTime < fromTime) return false;
@@ -40,10 +49,15 @@ function validateFilters(filters = {}) {
   if (filters.from && filters.to) {
     const from = new Date(filters.from).getTime();
     const to = new Date(filters.to).getTime();
+
     if (!Number.isNaN(from) && !Number.isNaN(to) && from > to) {
-      return { valid: false, error: "From date should not be greater than To date" };
+      return {
+        valid: false,
+        error: "From date should not be greater than To date",
+      };
     }
   }
+
   return { valid: true, error: null };
 }
 
@@ -53,9 +67,10 @@ export function useLogs(filters = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Used to prevent duplicates
   const prevIds = useRef(new Set());
 
-  /* -------- REST FETCH (ONLY WHEN FILTERS CHANGE) -------- */
+  /* -------- REST SNAPSHOT (only on filter change) -------- */
   useEffect(() => {
     const controller = new AbortController();
     const validation = validateFilters(filters);
@@ -74,22 +89,29 @@ export function useLogs(filters = {}) {
           (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
         );
 
+        // Track existing IDs
         prevIds.current = new Set(
           sorted.map((l) => `${l.timestamp}-${l.traceId}-${l.spanId}`)
         );
 
-        setLogs(sorted); // initial snapshot
+        setLogs(sorted);
       })
-      .catch(() => setError("Failed to fetch logs from server"))
+      .catch(() => {
+        setError("Failed to fetch logs from server");
+      })
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [JSON.stringify(filters)]); // <-- stable dependency
+  }, [JSON.stringify(filters)]);
 
-  /* -------- SOCKET (INCREMENTAL ONLY) -------- */
+  /* -------- SOCKET STREAM (ONLY ONCE) -------- */
   useEffect(() => {
+    const socket = getSocket(); // 🔥 THIS WAS THE MISSING LINE
+
     const handler = (newLog) => {
       const key = `${newLog.timestamp}-${newLog.traceId}-${newLog.spanId}`;
+
+      // Skip duplicates
       if (prevIds.current.has(key)) return;
 
       prevIds.current.add(key);
@@ -97,13 +119,20 @@ export function useLogs(filters = {}) {
     };
 
     socket.on("new_log", handler);
-    return () => socket.off("new_log", handler);
+
+    return () => {
+      socket.off("new_log", handler);
+    };
   }, []);
 
-  /* -------- FILTER VIEW -------- */
+  /* -------- FILTERED VIEW -------- */
   const visibleLogs = useMemo(() => {
     return logs.filter((l) => matchesFilters(l, filters));
   }, [logs, filters]);
 
-  return { logs: visibleLogs, loading, error };
+  return {
+    logs: visibleLogs,
+    loading,
+    error,
+  };
 }

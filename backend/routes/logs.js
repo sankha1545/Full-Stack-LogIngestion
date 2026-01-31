@@ -1,4 +1,7 @@
-// routes/logs.js
+// backend/routes/logs.js
+
+const express = require("express");
+const router = express.Router();
 
 const { z } = require("zod");
 const fs = require("fs-extra");
@@ -32,9 +35,9 @@ const QuerySchema = z.object({
   caseSensitive: z.enum(["true", "false"]).optional(),
 });
 
-/* ---------------- POST /logs ---------------- */
+/* ---------------- POST /api/logs ---------------- */
 
-async function postLogs(req, res) {
+router.post("/logs", async (req, res) => {
   const parsed = LogSchema.safeParse(req.body);
 
   if (!parsed.success) {
@@ -47,23 +50,22 @@ async function postLogs(req, res) {
     await fs.ensureFile(LOG_FILE);
     await fs.appendFile(LOG_FILE, JSON.stringify(log) + "\n");
 
-   
-   const io = req.app.get("io");
-if (io) {
-  io.emit("new_log", log);
-}
-
+    // Emit to websocket clients
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("new_log", log);
+    }
 
     return res.status(201).json(log);
   } catch (err) {
     console.error("POST /logs failed:", err);
     return res.status(500).json({ error: "Failed to save log" });
   }
-}
+});
 
-/* ---------------- GET /logs ---------------- */
+/* ---------------- GET /api/logs ---------------- */
 
-async function getLogs(req, res) {
+router.get("/logs", async (req, res) => {
   try {
     const parsedQuery = QuerySchema.safeParse(req.query);
 
@@ -156,6 +158,6 @@ async function getLogs(req, res) {
     console.error("GET /logs failed:", err);
     return res.status(500).json({ error: "Failed to read logs" });
   }
-}
+});
 
-module.exports = { postLogs, getLogs };
+module.exports = router;
