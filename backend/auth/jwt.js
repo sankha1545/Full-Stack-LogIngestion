@@ -1,8 +1,12 @@
 const jwt = require("jsonwebtoken");
 
-exports.signToken = (user) =>
-  jwt.sign(
-    { id: user.id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+const JWT_SECRET = process.env.JWT_SECRET;
+const EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+
+exports.signToken = (payload) => {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: EXPIRES_IN });
+};
+
+exports.verifyToken = (token) => {
+  return jwt.verify(token, JWT_SECRET);
+};

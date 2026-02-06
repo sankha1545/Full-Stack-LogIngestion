@@ -1,24 +1,117 @@
 // prisma/schema.prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
 
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/* =====================================================
+   ENUMS
+===================================================== */
 
 enum Role {
   MASTER_ADMIN
   USER
 }
 
+enum InquiryType {
+  GENERAL
+  PRICING
+  ENTERPRISE
+  INTEGRATIONS
+  OTHER
+}
+
+/* =====================================================
+   USER & AUTH
+===================================================== */
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
-  password  String?
+  password  String?             // nullable for OAuth users
   role      Role     @default(USER)
   provider  String   @default("credentials")
   createdAt DateTime @default(now())
+
+  // Relations
+  contactRequests ContactRequest[]
+}
+
+/* =====================================================
+   CONTACT SALES
+===================================================== */
+
+model ContactRequest {
+  id          String   @id @default(uuid())
+
+  // Optional external reference (CRM, email thread, etc.)
+  ref         String?  @unique
+
+  fullName    String
+  email       String
+
+  // Phone components
+  phoneDialCode String?   // "+91"
+  phoneLocal    String?   // "9876543210"
+  phoneFull     String?   // "+91 9876543210"
+
+  company     String
+  employees   String?
+  inquiry     InquiryType
+
+  country     String?
+  state       String?
+
+  message     String?
+  marketingOk Boolean     @default(false)
+
+  source      String      @default("contact-sales-page")
+  createdAt   DateTime    @default(now())
+
+  // Optional link to authenticated user
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([company])
+  @@index([createdAt])
+}
+
+/* =====================================================
+   LOGS (NDJSON → DATABASE ALIGNED)
+===================================================== */
+
+model Log {
+  id String @id @default(uuid())
+
+  // Core NDJSON fields
+  level      String
+  message    String
+  resourceId String
+
+  // Original log timestamp (event time)
+  timestamp  DateTime
+
+  traceId    String
+  spanId     String
+  commit     String
+
+  // Arbitrary structured metadata
+  metadata   Json
+
+  // Ingestion time
+  createdAt DateTime @default(now())
+
+  // Indexes for fast filtering & querying
+  @@index([level])
+  @@index([resourceId])
+  @@index([timestamp])
+  @@index([traceId])
+  @@index([spanId])
+  @@index([commit])
 }

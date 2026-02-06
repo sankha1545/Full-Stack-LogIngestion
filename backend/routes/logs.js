@@ -1,14 +1,8 @@
-// backend/routes/logs.js
-
 const express = require("express");
 const router = express.Router();
-
 const { z } = require("zod");
-const fs = require("fs-extra");
-const path = require("path");
-const readline = require("readline");
 
-const LOG_FILE = path.join(__dirname, "../data/logs.ndjson");
+const { createLog, queryLogs } = require("../services/log.service");
 
 /* ---------------- SCHEMAS ---------------- */
 
@@ -37,24 +31,18 @@ const QuerySchema = z.object({
 
 /* ---------------- POST /api/logs ---------------- */
 
-router.post("/logs", async (req, res) => {
+router.post("/", async (req, res) => {
   const parsed = LogSchema.safeParse(req.body);
-
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid log format" });
   }
 
-  const log = parsed.data;
-
   try {
-    await fs.ensureFile(LOG_FILE);
-    await fs.appendFile(LOG_FILE, JSON.stringify(log) + "\n");
+    const log = await createLog(parsed.data);
 
-    // Emit to websocket clients
+    // WebSocket broadcast
     const io = req.app.get("io");
-    if (io) {
-      io.emit("new_log", log);
-    }
+    if (io) io.emit("new_log", log);
 
     return res.status(201).json(log);
   } catch (err) {
@@ -65,98 +53,26 @@ router.post("/logs", async (req, res) => {
 
 /* ---------------- GET /api/logs ---------------- */
 
-router.get("/logs", async (req, res) => {
+router.get("/", async (req, res) => {
+  const parsedQuery = QuerySchema.safeParse(req.query);
+  if (!parsedQuery.success) {
+    return res.status(400).json({ error: "Invalid query parameters" });
+  }
+
+  const { from, to } = parsedQuery.data;
+
+  if (from && to && new Date(from) > new Date(to)) {
+    return res
+      .status(400)
+      .json({ error: "From date should not be greater than To date" });
+  }
+
   try {
-    const parsedQuery = QuerySchema.safeParse(req.query);
-
-    if (!parsedQuery.success) {
-      return res.status(400).json({ error: "Invalid query parameters" });
-    }
-
-    const {
-      level,
-      search,
-      resourceId,
-      from,
-      to,
-      traceId,
-      spanId,
-      commit,
-      caseSensitive,
-    } = parsedQuery.data;
-
-    // Defensive date validation
-    if (from && to) {
-      const fromTime = new Date(from).getTime();
-      const toTime = new Date(to).getTime();
-      if (!Number.isNaN(fromTime) && !Number.isNaN(toTime) && fromTime > toTime) {
-        return res
-          .status(400)
-          .json({ error: "From date should not be greater than To date" });
-      }
-    }
-
-    if (!(await fs.pathExists(LOG_FILE))) {
-      return res.json([]);
-    }
-
-    const startTime = from ? new Date(from).getTime() : null;
-    const endTime = to ? new Date(to).getTime() : Date.now();
-
-    const results = [];
-    const stream = fs.createReadStream(LOG_FILE);
-    const rl = readline.createInterface({ input: stream });
-
-    for await (const line of rl) {
-      if (!line.trim()) continue;
-
-      let log;
-      try {
-        log = JSON.parse(line);
-      } catch {
-        continue;
-      }
-
-      // Filters
-      if (level) {
-        const levels = level.split(",").map((s) => s.trim());
-        if (!levels.includes(log.level)) continue;
-      }
-
-      if (resourceId) {
-        if (
-          !String(log.resourceId || "")
-            .toLowerCase()
-            .includes(resourceId.toLowerCase())
-        ) {
-          continue;
-        }
-      }
-
-      if (search) {
-        const safe = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const flags = caseSensitive === "true" ? "" : "i";
-        const regex = new RegExp(safe, flags);
-        if (!regex.test(String(log.message || ""))) continue;
-      }
-
-      if (traceId && log.traceId !== traceId) continue;
-      if (spanId && log.spanId !== spanId) continue;
-      if (commit && log.commit !== commit) continue;
-
-      const t = new Date(log.timestamp).getTime();
-      if (Number.isNaN(t)) continue;
-      if (startTime && t < startTime) continue;
-      if (endTime && t > endTime) continue;
-
-      results.push(log);
-    }
-
-    results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    return res.json(results);
+    const logs = await queryLogs(parsedQuery.data);
+    return res.json(logs);
   } catch (err) {
     console.error("GET /logs failed:", err);
-    return res.status(500).json({ error: "Failed to read logs" });
+    return res.status(500).json({ error: "Failed to fetch logs" });
   }
 });
 
