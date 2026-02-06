@@ -10,7 +10,7 @@ import Analytics from "./pages/Analytics.jsx";
 import Landing from "./pages/Landing.jsx";
 import Login from "./auth/login/Login.jsx";
 import Signup from "./auth/signup/SignupPage.jsx";
-import ContactSales from "@/components/landingpage/ContactSales";
+import ContactSales from "@/components/landingpage/Sales/ContactSales";
 
 import RequireAuth from "./auth/RequireAuth.jsx";
 import { AuthProvider } from "./context/AuthContext";
