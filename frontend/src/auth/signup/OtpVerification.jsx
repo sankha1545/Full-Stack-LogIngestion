@@ -38,10 +38,43 @@ export default function OtpVerification({ email, onVerified }) {
 
   const isComplete = otp.every((d) => d !== "");
 
-  const verifyOtp = () => {
-    if (!isComplete) return;
-    onVerified();
-  };
+const verifyOtp = async () => {
+  if (!isComplete) return;
+
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/auth/verify-otp`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email,
+          code: otp.join(""),
+        }),
+      }
+    );
+
+    // 👇 SAFELY read response
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+
+    if (!res.ok) {
+      alert(data.error || "Invalid or expired OTP");
+      return;
+    }
+
+    if (data.verified) {
+      onVerified(); // move to CreateAccount
+    }
+  } catch (err) {
+    console.error("OTP verify failed:", err);
+    alert("Unable to verify OTP. Please try again.");
+  }
+};
+
+
+
 
   return (
     <div className="space-y-6">
@@ -69,7 +102,7 @@ export default function OtpVerification({ email, onVerified }) {
             value={value}
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
-            className="w-12 h-12 text-lg font-semibold text-center text-white border rounded-lg  border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-12 h-12 text-lg font-semibold text-center text-white border rounded-lg border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         ))}
       </div>

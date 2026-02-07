@@ -1,33 +1,37 @@
 export default function PasswordStrength({ password }) {
-  const score = getScore(password);
+  if (!password) return null;
+
+  const strength = getPasswordStrength(password);
 
   return (
     <div className="mt-2">
-      <div className="h-1 rounded bg-white/10">
-        <div
-          className={`h-1 rounded ${
-            score < 2 ? "bg-red-500" :
-            score < 4 ? "bg-yellow-500" :
-            "bg-green-500"
-          }`}
-          style={{ width: `${(score / 5) * 100}%` }}
-        />
-      </div>
-      <p className="mt-1 text-xs text-white/60">
-        {score < 2 && "Weak"}
-        {score >= 2 && score < 4 && "Moderate"}
-        {score >= 4 && "Strong"}
-      </p>
+      <span
+        className="text-sm font-medium"
+        style={{ color: strength.color }}
+      >
+        {strength.label}
+      </span>
     </div>
   );
 }
 
-function getScore(pwd) {
-  let s = 0;
-  if (pwd.length >= 10) s++;
-  if (/[A-Z]/.test(pwd)) s++;
-  if (/[a-z]/.test(pwd)) s++;
-  if (/\d/.test(pwd)) s++;
-  if (/[^A-Za-z0-9]/.test(pwd)) s++;
-  return s;
+/* ---------------------------------- */
+/* Helper                              */
+/* ---------------------------------- */
+
+function getPasswordStrength(password) {
+  let score = 0;
+
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 1) {
+    return { label: "Weak", color: "#ef4444" };
+  }
+  if (score === 2) {
+    return { label: "Medium", color: "#f59e0b" };
+  }
+  return { label: "Strong", color: "#22c55e" };
 }

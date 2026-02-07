@@ -3,9 +3,9 @@ import Navbar from "../layout/Navbar";
 import Hero from "../components/landingpage/Hero";
 import Features from "../components/landingpage/Features";
 import About from "../components/landingpage/About";
-import HowItWorks from "../components/landingpage/HowItWorks";
-import UseCases from "../components/landingpage/UseCases";
-import Architecture from "../components/landingpage/Architecture";
+import HowItWorks from "../components/landingpage/HowitWorks/HowItWorks";
+import UseCases from "../components/landingpage/UseCases/UseCases";
+import Architecture from "../components/landingpage/Architecture/Architecture";
 import CTA from "../components/landingpage/CTA";
 import Footer from "../components/landingpage/Footer";
 

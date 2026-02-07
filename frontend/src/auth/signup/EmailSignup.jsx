@@ -16,11 +16,25 @@ export default function EmailSignup({ onOtpSent }) {
     return () => clearInterval(interval);
   }, [timer]);
 
-  const sendOtp = () => {
-    if (!email) return;
+const sendOtp = async () => {
+  if (!email) return;
+
+  try {
+    const res = await fetch("http://localhost:3001/api/auth/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!res.ok) throw new Error("Failed to send OTP");
+
     setTimer(30);
     onOtpSent(email);
-  };
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
 
   return (
     <div className="space-y-6">

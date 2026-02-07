@@ -25,11 +25,13 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
+    "nodemailer": "^8.0.0",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
     "prisma": "^6.19.2",
     "proper-lockfile": "^4.1.2",
+    "resend": "^6.9.1",
     "socket.io": "^4.8.3",
     "zod": "^3.25.76"
   },

@@ -17,16 +17,21 @@ export function AuthProvider({ children }) {
     setToken(null);
   };
 
+  const value = {
+    token,
+    isAuthenticated: Boolean(token),
+    login,
+    logout,
+  };
+
   return (
-    <AuthContext.Provider value={{ token, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-/**
- * ✅ NAMED EXPORT — THIS FIXES THE ERROR
- */
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

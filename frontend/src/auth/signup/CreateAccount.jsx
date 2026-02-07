@@ -1,17 +1,23 @@
 import { useState } from "react";
 import { User, Mail, Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 import PasswordStrength from "./passwordStrength";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CreateAccount({ email }) {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const canSubmit =
     username &&
@@ -21,14 +27,40 @@ export default function CreateAccount({ email }) {
 
   const submit = async () => {
     if (!canSubmit) return;
+
     setLoading(true);
+    setError("");
 
-    // 🔗 hook your API call here
-    // await createAccount({ username, email, password });
+    try {
+      const res = await fetch("http://localhost:3001/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          username,
+          password,
+        }),
+      });
 
-    setTimeout(() => {
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Signup failed");
+      }
+
+      const { token } = await res.json();
+
+      // 🔐 Save JWT
+      login(token);
+
+      // 🚀 Redirect
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -42,6 +74,13 @@ export default function CreateAccount({ email }) {
           Final step — set up your credentials
         </p>
       </div>
+
+      {/* Error */}
+      {error && (
+        <div className="px-3 py-2 text-sm text-red-400 border rounded-lg bg-red-500/10 border-red-500/20">
+          {error}
+        </div>
+      )}
 
       {/* Username */}
       <div className="space-y-2">
@@ -85,7 +124,6 @@ export default function CreateAccount({ email }) {
         </div>
       </div>
 
-      {/* Password strength */}
       <PasswordStrength password={password} />
 
       {/* Confirm password */}

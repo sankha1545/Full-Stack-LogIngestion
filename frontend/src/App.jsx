@@ -18,7 +18,6 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen overflow-x-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-
       {/* Mobile sidebar */}
       <div className="lg:hidden">
         <Sidebar mobile open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -30,10 +29,8 @@ export default function App() {
       </div>
 
       <div className="flex flex-col flex-1 w-full">
-
         {/* Header */}
         <header className="flex items-center gap-3 px-3 py-3 bg-white border-b dark:bg-slate-900 dark:border-slate-800 sm:px-6">
-
           <button
             onClick={() => setSidebarOpen(true)}
             className="px-2 py-1 rounded lg:hidden bg-slate-200 dark:bg-slate-800"
