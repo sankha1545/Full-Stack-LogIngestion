@@ -129,3 +129,19 @@ model EmailOtp {
   @@index([email])
   @@index([email, code])
 }
+/* =====================================================
+   AUTH AUDIT LOGS
+===================================================== */
+
+model AuthAuditLog {
+  id        String   @id @default(uuid())
+  email     String
+  event     String   // LOGIN_SUCCESS, LOGIN_FAILED, OTP_SENT, OTP_VERIFIED, PASSWORD_RESET, SIGNUP
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([event])
+  @@index([createdAt])
+}

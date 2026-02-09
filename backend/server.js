@@ -6,12 +6,20 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
+const passport = require("passport");
 require("dotenv").config();
+
+/* --------------------------------------------------
+   Passport strategies (Google / GitHub)
+-------------------------------------------------- */
+require("./auth/passport");
 
 const app = express();
 app.disable("etag");
 
-/* -------------------- SECURITY MIDDLEWARE -------------------- */
+/* --------------------------------------------------
+   SECURITY MIDDLEWARE
+-------------------------------------------------- */
 
 // Helmet: security headers
 app.use(
@@ -20,16 +28,19 @@ app.use(
   })
 );
 
-// Morgan: request logging
+// Request logging
 app.use(morgan("dev"));
 
-// JSON parsing
+// Body parsing
 app.use(express.json());
 
-// Cookies (JWT stored here)
+// Cookies
 app.use(cookieParser());
 
-// CORS (Vite + credentials)
+// Passport (OAuth, stateless)
+app.use(passport.initialize());
+
+// CORS (Vite)
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -38,37 +49,43 @@ app.use(
   })
 );
 
-// Rate limiting (auth + contact protection)
+// Rate limiting
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api", apiLimiter);
 
-/* -------------------- ROUTES -------------------- */
+/* --------------------------------------------------
+   ROUTES
+-------------------------------------------------- */
 
-// Existing
+// Core routes
 const logsRouter = require("./routes/logs");
 const contactRouter = require("./routes/contact");
 const geoRouter = require("./routes/geo");
 
-// NEW: Auth
-const authRouter = require("./routes/auth");
+// Auth routes
+const authRouter = require("./routes/auth");     // email + password
+const oauthRouter = require("./routes/oauth");   // Google / GitHub
 
 // Mount routes
 app.use("/api", logsRouter);
 app.use("/api/contact", contactRouter);
 app.use("/api/geo", geoRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/auth", oauthRouter);
 
 // Health check
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-/* -------------------- SOCKET.IO -------------------- */
+/* --------------------------------------------------
+   SOCKET.IO
+-------------------------------------------------- */
 
 let server;
 let io;
