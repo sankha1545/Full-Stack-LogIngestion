@@ -1,4 +1,4 @@
-export default function getPasswordStrength(password) {
+export function getPasswordStrength(password = "") {
   let score = 0;
 
   if (password.length >= 10) score++;
@@ -9,5 +9,5 @@ export default function getPasswordStrength(password) {
 
   if (score <= 2) return { label: "Weak", color: "bg-red-500" };
   if (score === 3) return { label: "Medium", color: "bg-yellow-500" };
-  if (score >= 4) return { label: "Strong", color: "bg-green-500" };
+  return { label: "Strong", color: "bg-green-500" };
 }

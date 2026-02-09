@@ -5,53 +5,36 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
-/* Eager imports for small pages/components */
-import ArchitectureDocs from "@/components/landingpage/Architecture/ArchitectureDocs";
-import TemplateDocs from "@/components/landingpage/UseCases/TemplateDocs";
-import Templates from "@/components/landingpage/UseCases/Templates.jsx";
-import TemplateDetails from "@/components/landingpage/UseCases/TemplateDetails";
-
 import App from "./App.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
-import Analytics from "./pages/Analytics.jsx";
 import Landing from "./pages/Landing.jsx";
 import Login from "./auth/login/Login.jsx";
 import Signup from "./auth/signup/SignupPage.jsx";
+import CreateAccount from "./auth/signup/CreateAccount";
+import Dashboard from "./pages/Dashboard.jsx";
+import Analytics from "./pages/Analytics.jsx";
 import ContactSales from "@/components/landingpage/Sales/ContactSales";
 
 import RequireAuth from "./auth/RequireAuth.jsx";
 import { AuthProvider } from "./context/AuthContext";
 
-/* Lazy-load heavier docs pages (code-splitting) */
+/* Lazy pages */
 const Docs = lazy(() => import("@/components/landingpage/HowitWorks/docs/Docs"));
-// you can also lazy-load ArchitectureDocs/TemplateDocs if desired:
-// const ArchitectureDocs = lazy(() => import("@/components/landingpage/Architecture/ArchitectureDocs"));
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AuthProvider>
       <BrowserRouter>
-        {/* Suspense wraps routes that contain lazy-loaded components */}
-        <Suspense fallback={<div className="p-8 text-center">Loading…</div>}>
+        <Suspense fallback={<div className="p-6 text-center">Loading…</div>}>
           <Routes>
-            {/* Public routes */}
+            {/* Public */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/create-account" element={<CreateAccount />} />
             <Route path="/contact" element={<ContactSales />} />
-
-            {/* Docs (public) */}
             <Route path="/docs" element={<Docs />} />
 
-            {/* Architecture docs */}
-            <Route path="/architecture/docs" element={<ArchitectureDocs />} />
-
-            {/* Public templates + docs */}
-            <Route path="/templates" element={<Templates />} />
-            <Route path="/templates/:id" element={<TemplateDetails />} />
-            <Route path="/templates/:id/docs" element={<TemplateDocs />} />
-
-            {/* Protected app routes (layout + auth guard) */}
+            {/* Protected */}
             <Route element={<RequireAuth />}>
               <Route element={<App />}>
                 <Route path="/dashboard" element={<Dashboard />} />

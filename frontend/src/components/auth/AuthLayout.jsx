@@ -69,42 +69,48 @@ export default function AuthLayout({
       )}
 
       {/* RIGHT — PRIMARY ACTION */}
-      <div className="w-full lg:w-[48%] flex items-center justify-center px-6 relative">
-        {/* Focus glow */}
-        <div className="absolute w-[420px] h-[420px] bg-indigo-500/15 rounded-full blur-3xl" />
+    {/* RIGHT — PRIMARY ACTION */}
+<div className="w-full lg:w-[48%] flex items-center justify-start px-8 lg:px-16 relative">
+  {/* Focus glow */}
+  <div className="absolute w-[420px] h-[420px] bg-indigo-500/15 rounded-full blur-3xl" />
 
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-          className="relative z-10 w-full max-w-md"
-        >
-          <Card className="relative overflow-hidden bg-[#0b0f1a] border border-white/10 shadow-[0_25px_70px_rgba(0,0,0,0.7)]">
-            {/* Top accent */}
-            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500" />
+  <motion.div
+    initial={{ opacity: 0, y: 24 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.35, ease: "easeOut" }}
+    className="relative z-10 w-full max-w-4xl"
+  >
+    <Card className="relative overflow-hidden bg-[#0b0f1a] border border-white/10 shadow-[0_25px_70px_rgba(0,0,0,0.7)]">
+      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500" />
 
-            <CardHeader className="pt-8 space-y-2">
-              <CardTitle className="text-2xl font-semibold text-white">
-                {cardTitle}
-              </CardTitle>
-              {cardDescription ? (
-                <CardDescription className="text-gray-400">
-                  {cardDescription}
-                </CardDescription>
-              ) : null}
-            </CardHeader>
+      <CardHeader className="pt-8 space-y-2">
+        <CardTitle className="text-2xl font-semibold text-white">
+          {cardTitle}
+        </CardTitle>
+        {cardDescription && (
+          <CardDescription className="text-gray-400">
+            {cardDescription}
+          </CardDescription>
+        )}
+      </CardHeader>
 
-            <CardContent className="pb-8 space-y-6">{children}</CardContent>
-          </Card>
+      <CardContent className="pb-8 space-y-6">
+        {children}
+      </CardContent>
+    </Card>
 
-          <p className="mt-6 text-sm text-center text-gray-500">
-            {footerPrompt}{" "}
-            <Link to={footerLinkTo} className="font-medium text-indigo-400 hover:underline">
-              {footerLinkText}
-            </Link>
-          </p>
-        </motion.div>
-      </div>
+    <p className="mt-6 text-sm text-center text-gray-500">
+      {footerPrompt}{" "}
+      <Link
+        to={footerLinkTo}
+        className="font-medium text-indigo-400 hover:underline"
+      >
+        {footerLinkText}
+      </Link>
+    </p>
+  </motion.div>
+</div>
+
     </div>
   );
 }

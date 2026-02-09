@@ -1,9 +1,14 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-export default function OtpVerification({ email, onVerified }) {
+export default function OtpVerification({ email }) {
   const [otp, setOtp] = useState(["", "", "", ""]);
+  const [loading, setLoading] = useState(false);
   const inputsRef = useRef([]);
+  const navigate = useNavigate();
+
+  /* ----------------------------- input logic ----------------------------- */
 
   const handleChange = (index, value) => {
     if (!/^\d?$/.test(value)) return;
@@ -12,14 +17,12 @@ export default function OtpVerification({ email, onVerified }) {
     next[index] = value;
     setOtp(next);
 
-    // Move forward
     if (value && inputsRef.current[index + 1]) {
       inputsRef.current[index + 1].focus();
     }
   };
 
   const handleKeyDown = (index, e) => {
-    // Move backward on backspace
     if (e.key === "Backspace" && !otp[index] && inputsRef.current[index - 1]) {
       inputsRef.current[index - 1].focus();
     }
@@ -29,56 +32,56 @@ export default function OtpVerification({ email, onVerified }) {
     const pasted = e.clipboardData.getData("text").trim();
     if (!/^\d{4}$/.test(pasted)) return;
 
-    const values = pasted.split("");
-    setOtp(values);
-
-    // Focus last input
+    setOtp(pasted.split(""));
     inputsRef.current[3]?.focus();
   };
 
-  const isComplete = otp.every((d) => d !== "");
+  const isComplete = otp.every(Boolean);
 
-const verifyOtp = async () => {
-  if (!isComplete) return;
+  /* ----------------------------- verify OTP ------------------------------ */
+
+ const verifyOtp = async () => {
+  if (!isComplete || loading) return;
+  setLoading(true);
 
   try {
-    const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/auth/verify-otp`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          email,
-          code: otp.join(""),
-        }),
-      }
-    );
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, code: otp.join("") }),
+    });
 
-    // 👇 SAFELY read response
     const text = await res.text();
     const data = text ? JSON.parse(text) : {};
 
-    if (!res.ok) {
+    if (!res.ok || !data.verified) {
       alert(data.error || "Invalid or expired OTP");
       return;
     }
 
-    if (data.verified) {
-      onVerified(); // move to CreateAccount
-    }
+    // Persist email so CreateAccount can read it (sessionStorage scope)
+    sessionStorage.setItem("signup_email", email);
+
+    // Debug
+    console.log("OTP verified — saved signup_email and navigating to /create-account", { email });
+
+    // Navigate (no need to pass state now)
+    navigate("/create-account", { replace: true });
+
   } catch (err) {
     console.error("OTP verify failed:", err);
     alert("Unable to verify OTP. Please try again.");
+  } finally {
+    setLoading(false);
   }
 };
 
 
-
+  /* -------------------------------- UI ---------------------------------- */
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="space-y-1 text-center">
         <h3 className="text-lg font-semibold">Verify your email</h3>
         <p className="text-sm text-gray-400">
@@ -87,11 +90,7 @@ const verifyOtp = async () => {
         </p>
       </div>
 
-      {/* OTP Inputs */}
-      <div
-        className="flex justify-center gap-3"
-        onPaste={handlePaste}
-      >
+      <div className="flex justify-center gap-3" onPaste={handlePaste}>
         {otp.map((value, index) => (
           <input
             key={index}
@@ -107,16 +106,15 @@ const verifyOtp = async () => {
         ))}
       </div>
 
-      {/* Verify Button */}
       <Button
+        type="button"
         onClick={verifyOtp}
-        disabled={!isComplete}
+        disabled={!isComplete || loading}
         className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60"
       >
-        Verify code
+        {loading ? "Verifying…" : "Verify code"}
       </Button>
 
-      {/* Help text */}
       <p className="text-xs text-center text-gray-500">
         Didn’t receive the code? Check your spam folder or try again.
       </p>

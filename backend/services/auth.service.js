@@ -6,52 +6,53 @@ const prisma = new PrismaClient();
 const { hash, compare } = require("../utils/bcrypt");
 
 /**
- * Signup after OTP verification
+ * SIGNUP SERVICE
+ * ❌ NO router
+ * ❌ NO req / res
+ * ❌ NO middleware
  */
 exports.signup = async (email, password, username) => {
-  // 1. Ensure email was OTP-verified
-  const verifiedOtp = await prisma.emailOtp.findFirst({
-    where: {
-      email,
-      verified: true,
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const normalizedUsername = username
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "");
 
-  if (!verifiedOtp) {
-    throw new Error("Email not verified");
+  if (!/^[a-z0-9._-]{3,24}$/.test(normalizedUsername)) {
+    throw new Error("Invalid username format");
   }
 
-  // 2. Prevent duplicate users
-  const existing = await prisma.user.findUnique({
-    where: { email },
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [{ email }, { username: normalizedUsername }],
+    },
   });
 
   if (existing) {
     throw new Error("User already exists");
   }
 
-  // 3. Hash password
   const passwordHash = await hash(password);
 
-  // 4. Create user
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       email,
+      username: normalizedUsername,
       password: passwordHash,
       provider: "credentials",
+      emailVerified: true,
     },
   });
+
+  // OTP is irrelevant after signup
+  await prisma.emailOtp.deleteMany({ where: { email } });
+
+  return user;
 };
 
 /**
- * Login with email + password
+ * LOGIN SERVICE
  */
 exports.login = async (email, password) => {
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user || !user.password) return null;
 

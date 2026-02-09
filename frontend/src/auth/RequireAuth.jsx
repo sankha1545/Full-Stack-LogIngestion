@@ -1,18 +1,21 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 export default function RequireAuth() {
-  const token = localStorage.getItem("token");
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
 
-  if (!token) {
+  // 🔒 Not logged in → redirect to login
+  if (!isAuthenticated) {
     return (
       <Navigate
         to="/login"
-        state={{ from: location.pathname }}
         replace
+        state={{ from: location.pathname }}
       />
     );
   }
 
+  // ✅ Logged in → render protected routes
   return <Outlet />;
 }
