@@ -1,72 +1,122 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
 
+import Sidebar from "./components/Sidebar";
 import ConfirmLogoutModal from "@/components/ui/ConfirmLogoutModal";
 
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+import { Menu, LogOut, User, Settings } from "lucide-react";
+
 export default function App() {
-  const [theme, setTheme] = useState("dark");
+  const navigate = useNavigate();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const navigate = useNavigate();
-
-  /* ----------------------------------------
-     Theme
-  ---------------------------------------- */
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
-
-  /* ----------------------------------------
-     Logout
-  ---------------------------------------- */
+  /* ---------------- LOGOUT ---------------- */
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login", { replace: true });
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      {/* Sidebar */}
-      <div className="hidden lg:block">
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
+      {/* ================= SIDEBAR (DESKTOP) ================= */}
+      <aside className="hidden bg-white border-r lg:flex lg:w-72 lg:flex-col">
         <Sidebar />
-      </div>
+      </aside>
 
-      <div className="flex flex-col flex-1">
-        {/* Header */}
-        <header className="flex items-center gap-3 px-4 py-3 bg-white border-b dark:bg-slate-900 dark:border-slate-800">
-          <div className="flex-1">
-            <h1 className="text-lg font-bold">LogScope</h1>
-            <p className="text-xs text-slate-500">
-              Real-time Log Ingestion & Querying
-            </p>
+      {/* ================= MAIN ================= */}
+      <div className="flex flex-col flex-1 w-full">
+        {/* ================= HEADER ================= */}
+        <header className="sticky top-0 z-40 flex items-center h-16 gap-3 px-4 bg-white border-b sm:px-6">
+          {/* Mobile sidebar toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+
+          {/* Brand */}
+          <div className="flex flex-col leading-tight">
+            <span className="text-base font-semibold tracking-tight">
+              LogScope
+            </span>
+            <span className="text-xs text-slate-500">
+              Real-time log ingestion & querying
+            </span>
           </div>
 
-          <button
-            onClick={() =>
-              setTheme(theme === "dark" ? "light" : "dark")
-            }
-            className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-800"
-          >
-            {theme === "dark" ? "☀" : "🌙"}
-          </button>
+          <div className="flex-1" />
 
-          <button
-            onClick={() => setLogoutOpen(true)}
-            className="px-3 py-1 text-sm text-white bg-red-600 rounded hover:bg-red-700"
-          >
-            Logout
-          </button>
+          {/* ================= ACCOUNT DROPDOWN ================= */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-white border-slate-300"
+              >
+                <User className="w-4 h-4 " />
+                Account
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align="end"
+              className="bg-white w-52 border-slate-200"
+            >
+              <DropdownMenuItem
+                onClick={() => navigate("/settings")}
+                className="cursor-pointer"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Profile settings
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => setLogoutOpen(true)}
+                className="text-red-600 cursor-pointer focus:text-red-600"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4">
-          <Outlet />
+        {/* ================= CONTENT ================= */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-slate-100">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <Outlet />
+          </div>
         </main>
       </div>
 
-      {/* Logout confirmation */}
+      {/* ================= MOBILE SIDEBAR ================= */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="absolute top-0 left-0 h-full bg-white shadow-xl w-72">
+            <Sidebar mobile onClose={() => setSidebarOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* ================= LOGOUT MODAL ================= */}
       <ConfirmLogoutModal
         open={logoutOpen}
         onOpenChange={setLogoutOpen}
