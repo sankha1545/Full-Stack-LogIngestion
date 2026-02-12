@@ -27,25 +27,40 @@ function validateFilters(filters = {}) {
 ===================================================== */
 
 export function useLogs(filters = {}, options = {}) {
-  const {
-    page = 1,
-    limit = 50,
-  } = options;
+  const { page = 1, limit = 50 } = options;
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const prevIds = useRef(new Set());
+  const abortRef = useRef(null);
 
-  const applicationId = filters.applicationId;
+  /* -------------------------------------------------
+     STABLE DEPENDENCIES (CRITICAL FIX)
+  ------------------------------------------------- */
+
+  // prevents {} !== {} problem
+  const filtersKey = useMemo(
+    () => JSON.stringify(filters || {}),
+    [filters]
+  );
+
+  const applicationId = filters?.applicationId || null;
 
   /* -------------------------------------------------
      REST FETCH (server-side filtering + pagination)
   ------------------------------------------------- */
 
   useEffect(() => {
+    // cancel previous request if exists
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
     const controller = new AbortController();
+    abortRef.current = controller;
+
     const validation = validateFilters(filters);
 
     if (!validation.valid) {
@@ -58,19 +73,23 @@ export function useLogs(filters = {}, options = {}) {
 
     fetchLogs({ ...filters, page, limit }, controller.signal)
       .then((response) => {
+        if (!response) return; // aborted
+
         const data = response?.data || response || [];
 
         prevIds.current = new Set(data.map((l) => l.id));
-
         setLogs(data);
       })
-      .catch(() => {
-        setError("Failed to fetch logs from server");
+      .catch((err) => {
+        if (err?.name !== "AbortError") {
+          setError("Failed to fetch logs from server");
+        }
       })
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [filters, page, limit]);
+
+  }, [filtersKey, page, limit]); // ⭐ FIXED dependency
 
   /* -------------------------------------------------
      SOCKET STREAM (per-application room)
@@ -81,16 +100,15 @@ export function useLogs(filters = {}, options = {}) {
 
     const socket = getSocket();
 
-    // 🔥 Join correct application room
     socket.emit("join_application", applicationId);
 
     const handler = (newLog) => {
       if (!newLog || newLog.applicationId !== applicationId) return;
-
       if (prevIds.current.has(newLog.id)) return;
 
       prevIds.current.add(newLog.id);
 
+      // prepend log efficiently
       setLogs((prev) => [newLog, ...prev]);
     };
 
@@ -99,10 +117,11 @@ export function useLogs(filters = {}, options = {}) {
     return () => {
       socket.off("new_log", handler);
     };
+
   }, [applicationId]);
 
   /* -------------------------------------------------
-     Memoized Return (no client-side heavy filtering)
+     Memoized Return
   ------------------------------------------------- */
 
   const visibleLogs = useMemo(() => logs, [logs]);

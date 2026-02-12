@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import MFASetup from "./MFASetup";
@@ -6,119 +6,95 @@ import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
 
 export default function MFAToggle() {
-  const { token } = useAuth();
-  const API_URL = import.meta.env.VITE_API_URL;
+/* ⭐ use global auth state */
+const { token, user, refreshUser } = useAuth();
+const API_URL = import.meta.env.VITE_API_URL;
 
-  const [enabled, setEnabled] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [showSetup, setShowSetup] = useState(false);
+const [showSetup, setShowSetup] = useState(false);
+const [loading, setLoading] = useState(false);
 
-  /* =========================================
-     FETCH PROFILE (REAL STATE)
-  ========================================= */
+/* ⭐ source of truth */
+const enabled = Boolean(user?.mfaEnabled);
 
-  async function fetchProfile() {
-    if (!token) return;
+/* =========================================
+TOGGLE HANDLER
+========================================= */
 
-    try {
-      setLoading(true);
+async function onToggle(v) {
+if (loading) return;
 
-      const res = await fetch(`${API_URL}/api/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
 
-      if (!res.ok) return;
+/* ---------- ENABLE MFA ---------- */
+if (v) {
+  setShowSetup(true);
+  return;
+}
 
-      const data = await res.json();
+/* ---------- DISABLE MFA ---------- */
+const code = prompt("Enter authenticator code to disable MFA");
+if (!code) return;
 
-      console.log("PROFILE:", data); // debug
+try {
+  setLoading(true);
 
-      setEnabled(Boolean(data?.mfaEnabled));
+  const res = await fetch(`${API_URL}/api/auth/mfa/disable`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-    } catch (err) {
-      console.error("Profile fetch failed:", err);
-    } finally {
-      setLoading(false);
-    }
+  const body = await res.json();
+
+  if (!res.ok) {
+    toast.error(body.error || "Failed to disable MFA");
+    return;
   }
 
-  useEffect(() => {
-    fetchProfile();
-  }, [token]);
+  toast.success("MFA disabled");
 
-  /* =========================================
-     TOGGLE HANDLER
-  ========================================= */
+  /* ⭐ refresh global auth state */
+  await refreshUser();
 
-  async function onToggle(v) {
-    if (loading) return;
+} catch {
+  toast.error("Failed to disable MFA");
+} finally {
+  setLoading(false);
+}
 
-    /* ---------- ENABLE ---------- */
-    if (v) {
-      setShowSetup(true);
-      return;
-    }
 
-    /* ---------- DISABLE ---------- */
-    const code = prompt("Enter authenticator code to disable MFA");
-    if (!code) return;
+}
 
-    try {
-      const res = await fetch(`${API_URL}/api/auth/mfa/disable`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ code }),
-      });
+/* =========================================
+UI
+========================================= */
 
-      const body = await res.json();
+return (
+<> <div className="flex items-center justify-between gap-4"> <div> <Label>Multi-factor authentication</Label> <p className="text-xs text-muted-foreground">
+Require OTP during login </p> </div>
 
-      if (!res.ok) {
-        toast.error(body.error || "Failed to disable MFA");
-        return;
-      }
 
-      toast.success("MFA disabled");
+    <Switch
+      checked={enabled}
+      disabled={loading}
+      onCheckedChange={onToggle}
+    />
+  </div>
 
-      await fetchProfile(); // 🔥 refresh state
+  {/* MFA SETUP MODAL */}
+  {showSetup && (
+    <MFASetup
+      onClose={async () => {
+        setShowSetup(false);
 
-    } catch (err) {
-      toast.error("Failed to disable MFA");
-    }
-  }
+        /* ⭐ refresh after setup */
+        await refreshUser();
+      }}
+    />
+  )}
+</>
 
-  /* =========================================
-     UI
-  ========================================= */
 
-  return (
-    <>
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <Label>Multi-factor authentication</Label>
-          <p className="text-xs text-muted-foreground">
-            Require OTP during login
-          </p>
-        </div>
-
-        <Switch
-          checked={enabled}
-          disabled={loading}
-          onCheckedChange={onToggle}
-        />
-      </div>
-
-      {/* MFA SETUP MODAL */}
-      {showSetup && (
-        <MFASetup
-          onClose={async () => {
-            setShowSetup(false);
-            await fetchProfile(); // 🔥 refresh after setup
-          }}
-        />
-      )}
-    </>
-  );
+);
 }

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+// src/components/ui/sidebar/Sidebar.tsx
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ const NAV_ITEMS = [
   { label: "Settings", path: "/settings", icon: Settings },
 ];
 
-export default function Sidebar({ mobile = false, open = false, onClose }) {
+function SidebarInner({ mobile = false, open = false, onClose }) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const firstNavRef = useRef(null);
@@ -36,51 +37,47 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
-  /* --------------------------------------------------
-     Load logged-in user from JWT
-  -------------------------------------------------- */
+  /* ---------------- Load logged-in user from JWT ---------------- */
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const raw = token.split(".")[1];
+      if (!raw) return;
+      const payload = JSON.parse(atob(raw));
       setUser(payload);
     } catch (err) {
-      console.error("Invalid token");
+      // don't spam console on bad token
+      console.debug("Sidebar: invalid token or parsing failed");
     }
   }, []);
 
-  /* --------------------------------------------------
-     Fetch profile
-  -------------------------------------------------- */
+  /* ---------------- Fetch profile (once) ---------------- */
   useEffect(() => {
+    let mounted = true;
     const fetchProfile = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
       try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
         const res = await fetch("/api/profile", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-
+        if (!mounted) return;
         if (res.ok) {
           const data = await res.json();
           setProfile(data);
         }
       } catch (err) {
-        console.error("Failed to load profile");
+        console.debug("Sidebar: failed to load profile");
       }
     };
-
     fetchProfile();
+    return () => {
+      mounted = false;
+    };
   }, []);
-
-  /* --------------------------------------------------
-     Derived display values
-  -------------------------------------------------- */
 
   const fullName =
     profile?.firstName && profile?.lastName
@@ -91,7 +88,7 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
 
   const initials = fullName
     ?.split(" ")
-    .map((n) => n[0])
+    .map((n) => n[0] || "")
     .join("")
     .substring(0, 2)
     .toUpperCase();
@@ -107,16 +104,21 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
   /* ---------------- Auto focus (mobile) ---------------- */
   useEffect(() => {
     if (mobile && open) {
-      setTimeout(() => firstNavRef.current?.focus?.(), 120);
+      // small delay to allow animation to complete before focusing
+      const t = setTimeout(() => firstNavRef.current?.focus?.(), 160);
+      return () => clearTimeout(t);
     }
   }, [mobile, open]);
+
+  const toggleCollapsed = useCallback(() => setCollapsed((v) => !v), []);
+  const handleClose = useCallback(() => onClose?.(), [onClose]);
 
   return (
     <>
       {mobile && open && (
         <div
           className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-          onClick={onClose}
+          onClick={handleClose}
         />
       )}
 
@@ -128,6 +130,7 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
           bg-white border-r flex flex-col
         `}
         style={{ minHeight: "100dvh" }}
+        aria-label="Sidebar"
       >
         {/* Brand */}
         <div className="flex items-center justify-between px-4 py-5">
@@ -138,12 +141,8 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
 
             {!collapsed && (
               <div className="leading-tight">
-                <div className="text-lg font-bold tracking-tight">
-                  LogScope
-                </div>
-                <div className="text-xs text-slate-500">
-                  Observability platform
-                </div>
+                <div className="text-lg font-bold tracking-tight">LogScope</div>
+                <div className="text-xs text-slate-500">Observability platform</div>
               </div>
             )}
           </div>
@@ -151,22 +150,14 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
           <div className="flex items-center gap-1">
             {!mobile && (
               <Tooltip content={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setCollapsed((v) => !v)}
-                >
-                  {collapsed ? (
-                    <ChevronRight className="w-4 h-4" />
-                  ) : (
-                    <ChevronLeft className="w-4 h-4" />
-                  )}
+                <Button variant="ghost" size="icon" onClick={toggleCollapsed}>
+                  {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </Button>
               </Tooltip>
             )}
 
             {mobile && (
-              <Button variant="ghost" size="icon" onClick={onClose}>
+              <Button variant="ghost" size="icon" onClick={handleClose}>
                 <X className="w-5 h-5" />
               </Button>
             )}
@@ -184,16 +175,9 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
                   to={item.path}
                   ref={idx === 0 ? firstNavRef : null}
                   className={({ isActive }) =>
-                    `
-                      group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium
-                      transition-all
-                      ${
-                        isActive
-                          ? "bg-indigo-50 text-indigo-700"
-                          : "text-slate-700 hover:bg-slate-100"
-                      }
-                      ${collapsed ? "justify-center" : ""}
-                    `
+                    `group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+                      isActive ? "bg-indigo-50 text-indigo-700" : "text-slate-700 hover:bg-slate-100"
+                    } ${collapsed ? "justify-center" : ""}`
                   }
                 >
                   <span className="flex items-center justify-center transition rounded-lg w-9 h-9 group-hover:bg-white">
@@ -210,14 +194,14 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
 
           <div className={`space-y-2 ${collapsed ? "text-center" : ""}`}>
             {!collapsed && (
-              <Button className="justify-start w-full">
+              <Button className="justify-start w-full" onClick={() => navigate("/queries/new")}>
                 <Plus className="w-4 h-4 mr-2" />
                 New Query
               </Button>
             )}
 
             <Tooltip content="Help & documentation">
-              <Button variant="ghost" size="icon" className="mx-auto">
+              <Button variant="ghost" size="icon" className="mx-auto" onClick={() => window.open("/docs", "_blank")}>
                 <HelpCircle className="w-4 h-4" />
               </Button>
             </Tooltip>
@@ -226,11 +210,7 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
 
         {/* Profile Section */}
         <div className="px-4 py-4 border-t">
-          <div
-            className={`flex items-center gap-3 ${
-              collapsed ? "justify-center" : ""
-            }`}
-          >
+          <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
             <Avatar className="w-9 h-9">
               <AvatarImage src="/avatar.png" />
               <AvatarFallback>{initials}</AvatarFallback>
@@ -238,21 +218,13 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
 
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold">
-                  {fullName}
-                </div>
-                <div className="text-xs truncate text-slate-500">
-                  {email}
-                </div>
+                <div className="text-sm font-semibold">{fullName}</div>
+                <div className="text-xs truncate text-slate-500">{email}</div>
               </div>
             )}
 
             <Tooltip content="Account settings">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/settings")}
-              >
+              <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
                 <Settings className="w-4 h-4" />
               </Button>
             </Tooltip>
@@ -262,3 +234,5 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
     </>
   );
 }
+
+export default React.memo(SidebarInner);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   LineChart,
   Line,
@@ -20,11 +20,8 @@ import { useLogs } from "../hooks/useLogs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 
-/* --------------------------------------------------
-   Constants
--------------------------------------------------- */
+/* -------------------------------------------------- */
 
 const LEVEL_COLORS = {
   error: "#ef4444",
@@ -39,16 +36,49 @@ const DAILY_RANGES = [
   { label: "60D", days: 60 },
 ];
 
+const MAX_LOGS = 10000;
+const CHART_DEBOUNCE_MS = 250;
+
+/* -------------------------------------------------- */
+
 export default function Analytics() {
-  const { logs } = useLogs({});
+  // 🔥 IMPORTANT: NO {} here (fixes infinite refetch loop)
+  const { logs } = useLogs();
+
   const [mode, setMode] = useState("daily");
   const [dailyRange, setDailyRange] = useState(7);
 
+  const [snapshotLogs, setSnapshotLogs] = useState([]);
+  const debounceRef = useRef(null);
+
   /* --------------------------------------------------
-     TIME SERIES (daily / monthly / yearly)
+     Debounced snapshot for charts (performance)
   -------------------------------------------------- */
+
+  useEffect(() => {
+    const limited =
+      Array.isArray(logs) && logs.length > MAX_LOGS
+        ? logs.slice(-MAX_LOGS)
+        : logs || [];
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = window.setTimeout(() => {
+      setSnapshotLogs(limited);
+      debounceRef.current = null;
+    }, CHART_DEBOUNCE_MS);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [logs]);
+
+  /* --------------------------------------------------
+     TIME SERIES
+  -------------------------------------------------- */
+
   const timeSeries = useMemo(() => {
-    if (!logs.length) return [];
+    if (!snapshotLogs.length) return [];
 
     const now = new Date();
     let start;
@@ -63,9 +93,12 @@ export default function Analytics() {
 
     const map = new Map();
 
-    logs.forEach((log) => {
+    for (let i = 0; i < snapshotLogs.length; i++) {
+      const log = snapshotLogs[i];
       const d = new Date(log.timestamp);
-      if (d < start) return;
+
+      if (Number.isNaN(d.getTime())) continue;
+      if (d < start) continue;
 
       let key;
       if (mode === "daily") key = d.toISOString().slice(0, 10);
@@ -73,42 +106,44 @@ export default function Analytics() {
       else key = d.getFullYear().toString();
 
       map.set(key, (map.get(key) || 0) + 1);
-    });
+    }
 
-    return [...map.entries()].map(([time, count]) => ({ time, count }));
-  }, [logs, mode, dailyRange]);
+    return [...map.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([time, count]) => ({ time, count }));
+  }, [snapshotLogs, mode, dailyRange]);
 
   /* --------------------------------------------------
      BY LEVEL
   -------------------------------------------------- */
+
   const byLevel = useMemo(() => {
     const levels = { error: 0, warn: 0, info: 0, debug: 0 };
-    logs.forEach((l) => {
-      if (levels[l.level] !== undefined) levels[l.level]++;
-    });
-    return Object.entries(levels).map(([name, value]) => ({ name, value }));
-  }, [logs]);
 
-  const totalLogs = logs.length;
+    for (let i = 0; i < snapshotLogs.length; i++) {
+      const l = snapshotLogs[i];
+      if (l && levels[l.level] !== undefined) levels[l.level]++;
+    }
+
+    return Object.entries(levels).map(([name, value]) => ({ name, value }));
+  }, [snapshotLogs]);
+
+  const totalLogs = snapshotLogs.length;
   const errorCount = byLevel.find((l) => l.name === "error")?.value || 0;
   const warnCount = byLevel.find((l) => l.name === "warn")?.value || 0;
 
-  /* --------------------------------------------------
-     UI
-  -------------------------------------------------- */
+  /* -------------------------------------------------- */
+
   return (
     <div className="mx-auto max-w-[1400px] space-y-10 p-6">
-      {/* HEADER */}
       <header>
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-          Analytics
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Deep insights into system log behavior over time
+        <h1 className="text-3xl font-extrabold">Analytics</h1>
+        <p className="text-sm text-slate-500">
+          Deep insights into system log behavior
         </p>
       </header>
 
-      {/* KPI CARDS */}
+      {/* KPI */}
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <KpiCard label="Total Logs" value={totalLogs} />
         <KpiCard label="Errors" value={errorCount} color="text-red-600" />
@@ -116,9 +151,9 @@ export default function Analytics() {
       </section>
 
       {/* TIME SERIES */}
-      <Card className="border">
-        <CardHeader className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between">
             <CardTitle>Logs Over Time</CardTitle>
 
             <Tabs value={mode} onValueChange={setMode}>
@@ -148,96 +183,85 @@ export default function Analytics() {
 
         <CardContent>
           {timeSeries.length === 0 ? (
-            <EmptyState text="No logs available for this range" />
+            <EmptyState text="No logs available" />
           ) : (
-            <ResponsiveContainer width="100%" height={340}>
-              <LineChart data={timeSeries}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="#6366f1"
-                  strokeWidth={3}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ width: "100%", height: 340 }}>
+              <ResponsiveContainer>
+                <LineChart data={timeSeries}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Line
+                    dataKey="count"
+                    stroke="#6366f1"
+                    strokeWidth={3}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* BAR + PIE */}
       <section className="grid gap-8 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Logs by Severity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={byLevel}>
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {byLevel.map((e) => (
-                    <Cell key={e.name} fill={LEVEL_COLORS[e.name]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <ChartCard title="Logs by Severity">
+          <BarChart data={byLevel}>
+            <XAxis dataKey="name" />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="value" isAnimationActive={false}>
+              {byLevel.map((e) => (
+                <Cell key={e.name} fill={LEVEL_COLORS[e.name]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Severity Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={byLevel}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={100}
-                  label
-                >
-                  {byLevel.map((e) => (
-                    <Cell key={e.name} fill={LEVEL_COLORS[e.name]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <ChartCard title="Severity Distribution">
+          <PieChart>
+            <Pie data={byLevel} dataKey="value" nameKey="name" outerRadius={100}>
+              {byLevel.map((e) => (
+                <Cell key={e.name} fill={LEVEL_COLORS[e.name]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ChartCard>
       </section>
     </div>
   );
 }
 
-/* --------------------------------------------------
-   Small Components
--------------------------------------------------- */
+/* -------------------------------------------------- */
 
-function KpiCard({ label, value, color = "text-slate-900" }) {
+const KpiCard = React.memo(({ label, value, color = "text-slate-900" }) => (
+  <Card>
+    <CardContent className="pt-6">
+      <div className="text-sm text-slate-500">{label}</div>
+      <div className={`text-3xl font-bold ${color}`}>{value}</div>
+    </CardContent>
+  </Card>
+));
+
+function ChartCard({ title, children }) {
   return (
-    <Card className="transition hover:shadow-md">
-      <CardContent className="pt-6">
-        <div className="text-sm text-slate-500">{label}</div>
-        <div className={`mt-1 text-3xl font-bold ${color}`}>{value}</div>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div style={{ width: "100%", height: 260 }}>
+          <ResponsiveContainer>{children}</ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
 function EmptyState({ text }) {
-  return (
-    <div className="py-24 text-sm text-center text-slate-500">
-      {text}
-    </div>
-  );
+  return <div className="py-24 text-center text-slate-500">{text}</div>;
 }

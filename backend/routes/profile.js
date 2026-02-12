@@ -1,34 +1,40 @@
 const express = require("express");
 const router = express.Router();
 
-const requireAuth = require("../middlewares/requireAuth"); // FIXED PATH
+const requireAuth = require("../middlewares/requireAuth");
 const prisma = require("../utils/prisma");
+
+/* --------------------------------------------------
+   RESPONSE HELPER (keeps API consistent)
+-------------------------------------------------- */
+
+function formatUserResponse(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    mfaEnabled: user.mfaEnabled, // ⭐ REQUIRED FOR UI TOGGLE
+    profile: user.profile || {},
+  };
+}
 
 /* --------------------------------------------------
    GET current user's profile
 -------------------------------------------------- */
+
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
-
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        profile: true,
-      },
+      where: { id: req.user.id },
+      include: { profile: true },
     });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json({
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      role: user.role,
-      profile: user.profile || {},
-    });
+    res.status(200).json(formatUserResponse(user));
 
   } catch (err) {
     console.error("GET /api/profile error:", err);
@@ -39,6 +45,7 @@ router.get("/", requireAuth, async (req, res) => {
 /* --------------------------------------------------
    UPDATE current user's profile
 -------------------------------------------------- */
+
 router.put("/", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -59,7 +66,7 @@ router.put("/", requireAuth, async (req, res) => {
     }
 
     /* ------------------------------------------
-       Update username (if provided)
+       Update username
     ------------------------------------------ */
 
     if (username) {
@@ -80,10 +87,10 @@ router.put("/", requireAuth, async (req, res) => {
     }
 
     /* ------------------------------------------
-       Upsert profile safely
+       Upsert profile
     ------------------------------------------ */
 
-    const updatedProfile = await prisma.userProfile.upsert({
+    await prisma.userProfile.upsert({
       where: { userId },
       update: {
         firstName: firstName ?? null,
@@ -102,7 +109,17 @@ router.put("/", requireAuth, async (req, res) => {
       },
     });
 
-    return res.status(200).json(updatedProfile);
+    /* ------------------------------------------
+       RETURN FULL UPDATED USER
+       ⭐ CRITICAL FIX
+    ------------------------------------------ */
+
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true },
+    });
+
+    res.status(200).json(formatUserResponse(updatedUser));
 
   } catch (err) {
     console.error("PUT /api/profile error:", err);

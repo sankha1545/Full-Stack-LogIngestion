@@ -1,16 +1,22 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const API_URL = import.meta.env.VITE_API_URL;
 
   /* =====================================================
-     DEBUG HELPER
+     DEBUG LOGGER
   ===================================================== */
 
-  const log = (...args) => {
+  const log = (...args) =>
     console.log("%c[AUTH DEBUG]", "color:#8b5cf6;font-weight:bold", ...args);
-  };
 
   /* =====================================================
      STATE
@@ -19,7 +25,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => {
     const stored = localStorage.getItem("token");
     console.log("[AUTH INIT] token from storage:", stored);
-    return stored;
+    return stored || null;
   });
 
   const [user, setUser] = useState(() => {
@@ -36,27 +42,65 @@ export function AuthProvider({ children }) {
 
   const [hydrating, setHydrating] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  /* =====================================================
+     REFRESH USER — SINGLE SOURCE OF TRUTH
+     Always fetch from backend
+  ===================================================== */
+
+  const refreshUser = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      log("Refreshing user profile...");
+      setHydrating(true);
+
+      const res = await fetch(`${API_URL}/api/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        log("Profile refresh failed:", res.status);
+        return;
+      }
+
+      const data = await res.json();
+
+      setUser(data);
+      localStorage.setItem("user", JSON.stringify(data));
+
+      log("User updated:", data);
+    } catch (err) {
+      log("Profile refresh error:", err);
+    } finally {
+      setHydrating(false);
+    }
+  }, [token, API_URL]);
 
   /* =====================================================
      LOGIN
+     Saves token → syncs user from backend
   ===================================================== */
 
-  const login = (jwt, userData = null) => {
+  const login = async (jwt, userData = null) => {
     log("LOGIN CALLED");
-    log("Saving token:", jwt);
-    log("User data:", userData);
 
     localStorage.setItem("token", jwt);
     setToken(jwt);
 
+    // temporary user until backend sync
     if (userData) {
       localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
     }
 
+    // clear MFA temp session
     sessionStorage.removeItem("mfaSession");
     setTempMfaSessionState(null);
+
+    // always sync full profile from backend
+    await refreshUser();
   };
 
   /* =====================================================
@@ -64,13 +108,13 @@ export function AuthProvider({ children }) {
   ===================================================== */
 
   const setTempMfaSession = (session) => {
-    log("Setting temp MFA session:", session);
+    log("Setting MFA temp session:", session);
     sessionStorage.setItem("mfaSession", JSON.stringify(session));
     setTempMfaSessionState(session);
   };
 
   const clearTempMfaSession = () => {
-    log("Clearing MFA session");
+    log("Clearing MFA temp session");
     sessionStorage.removeItem("mfaSession");
     setTempMfaSessionState(null);
   };
@@ -79,15 +123,15 @@ export function AuthProvider({ children }) {
      LOGOUT
   ===================================================== */
 
-  const logout = async (reason = "manual") => {
-    log("LOGOUT CALLED — Reason:", reason);
+  const logout = useCallback(async () => {
+    log("LOGOUT CALLED");
 
     try {
       await fetch(`${API_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
-    } catch (_) {}
+    } catch {}
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -96,26 +140,10 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setTempMfaSessionState(null);
-  };
+  }, [API_URL]);
 
   /* =====================================================
-     TOKEN STATE WATCHER
-  ===================================================== */
-
-  useEffect(() => {
-    log("TOKEN STATE CHANGED:", token);
-  }, [token]);
-
-  /* =====================================================
-     USER STATE WATCHER
-  ===================================================== */
-
-  useEffect(() => {
-    log("USER STATE CHANGED:", user);
-  }, [user]);
-
-  /* =====================================================
-     AUTO LOGOUT IF TOKEN EXPIRED
+     TOKEN EXPIRY CHECK
   ===================================================== */
 
   useEffect(() => {
@@ -123,51 +151,29 @@ export function AuthProvider({ children }) {
 
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
-      log("Decoded token payload:", payload);
 
       if (payload.exp * 1000 < Date.now()) {
-        log("Token expired — logging out");
-        logout("token expired");
+        log("Token expired → logging out");
+        logout();
       }
-    } catch (err) {
-      log("Token decode failed — logging out", err);
-      logout("decode failed");
+    } catch {
+      logout();
     }
-  }, [token]);
+  }, [token, logout]);
 
   /* =====================================================
-     HYDRATE USER
+     AUTO HYDRATE USER ON APP LOAD (FIXED)
+     Always fetch user if token exists
   ===================================================== */
 
-useEffect(() => {
-  if (!token) return;
-
-  async function hydrateUser() {
-    try {
-      const res = await fetch(`${API_URL}/api/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        console.warn("[AUTH] Profile fetch failed, but NOT logging out.");
-        return;
-      }
-
-      const data = await res.json();
-      setUser(data);
-      localStorage.setItem("user", JSON.stringify(data));
-
-    } catch (err) {
-      console.warn("[AUTH] Profile fetch error:", err);
-      // 🚫 DO NOT logout here
+  useEffect(() => {
+    if (!token) {
+      setUser(null);
+      return;
     }
-  }
 
-  hydrateUser();
-}, [token]);
-
+    refreshUser();
+  }, [token, refreshUser]);
 
   /* =====================================================
      CONTEXT VALUE
@@ -177,12 +183,16 @@ useEffect(() => {
     token,
     user,
     hydrating,
+
     isAuthenticated: Boolean(token),
-    mfaPending: Boolean(tempMfaSession),
+
     tempMfaSession,
+    mfaPending: Boolean(tempMfaSession),
 
     login,
     logout,
+    refreshUser,
+
     setTempMfaSession,
     clearTempMfaSession,
   };
@@ -200,8 +210,10 @@ useEffect(() => {
 
 export function useAuth() {
   const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error("useAuth must be used inside AuthProvider");
   }
+
   return context;
 }
