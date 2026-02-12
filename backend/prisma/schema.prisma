@@ -38,6 +38,19 @@ enum AppMemberRole {
   VIEWER
 }
 
+/**
+ * ⭐ NEW — Professional log levels
+ */
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}
+
+/**
+ * UPDATED — added password events
+ */
 enum AuthEventType {
   LOGIN_SUCCESS
   LOGIN_FAILED
@@ -51,12 +64,15 @@ enum AuthEventType {
   RECOVERY_CODE_USED
   RECOVERY_CODES_REGENERATED
   PASSWORD_RESET
+  PASSWORD_CHANGED
+  PASSWORD_VERIFY_SUCCESS
+  PASSWORD_VERIFY_FAILED
   LOGOUT
 }
 
 /**
  * =====================================================
- * USER
+ * USER (SECURITY + SESSION MODEL)
  * =====================================================
  */
 
@@ -72,28 +88,16 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  /**
-   * ==========================
-   * MFA (Enterprise Grade)
-   * ==========================
-   */
+  tokenVersion      Int       @default(0)
+  passwordChangedAt DateTime?
+
+  failedLoginAttempts Int @default(0)
+  accountLockedUntil  DateTime?
 
   mfaEnabled Boolean @default(false)
-
-  /// AES encrypted Base32 TOTP secret
   mfaSecretEncrypted String?
-
-  /// Failed attempts before lock
-  mfaFailedAttempts Int @default(0)
-
-  /// Account locked until this timestamp
-  mfaLockedUntil DateTime?
-
-  /**
-   * ==========================
-   * Relations
-   * ==========================
-   */
+  mfaFailedAttempts  Int @default(0)
+  mfaLockedUntil     DateTime?
 
   profile         UserProfile?
   contactRequests ContactRequest[]
@@ -107,11 +111,12 @@ model User {
   @@index([role])
   @@index([email])
   @@index([mfaLockedUntil])
+  @@index([accountLockedUntil])
 }
 
 /**
  * =====================================================
- * MFA RECOVERY CODES (One-time use)
+ * MFA RECOVERY CODES
  * =====================================================
  */
 
@@ -121,9 +126,7 @@ model MfaRecoveryCode {
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  /// Store HASH ONLY (bcrypt)
   codeHash String
-
   used      Boolean  @default(false)
   usedAt    DateTime?
   createdAt DateTime @default(now())
@@ -144,9 +147,7 @@ model TrustedDevice {
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  /// SHA256(IP + UA)
   deviceHash String
-
   deviceName String?
   ipAddress  String?
   userAgent  String?
@@ -154,12 +155,10 @@ model TrustedDevice {
   createdAt DateTime @default(now())
   expiresAt DateTime
 
+  @@unique([userId, deviceHash])
   @@index([userId])
   @@index([deviceHash])
   @@index([expiresAt])
-
-  /// Prevent duplicate trust for same user/device
-  @@unique([userId, deviceHash])
 }
 
 /**
@@ -186,7 +185,7 @@ model UserProfile {
 
 /**
  * =====================================================
- * APPLICATION
+ * APPLICATION (CORE SAAS ENTITY)
  * =====================================================
  */
 
@@ -197,6 +196,13 @@ model Application {
 
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /**
+   * ⭐ NEW — connection endpoint for SDK integration
+   * Example:
+   * https://api.logscope.com/ingest
+   */
+  connectionUrl String?
 
   members AppMember[]
   apiKeys ApiKey[]
@@ -236,14 +242,25 @@ model AppMember {
 
 /**
  * =====================================================
- * API KEYS
+ * API KEYS (SECURE INGESTION)
  * =====================================================
  */
 
 model ApiKey {
   id            String      @id @default(uuid())
   name          String?
-  keyHash       String      @unique
+
+  /**
+   * Full hashed key stored securely
+   */
+  keyHash String @unique
+
+  /**
+   * ⭐ NEW — partial key for UI display
+   * Example: ls_8f3a...91ab
+   */
+  keyPreview String?
+
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
@@ -257,7 +274,7 @@ model ApiKey {
 
 /**
  * =====================================================
- * LOGS
+ * LOGS (OBSERVABILITY CORE)
  * =====================================================
  */
 
@@ -267,7 +284,11 @@ model Log {
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
-  level      String
+  /**
+   * ⭐ UPDATED — standardized log level
+   */
+  level LogLevel
+
   message    String
   resourceId String?
   timestamp  DateTime
@@ -284,9 +305,6 @@ model Log {
   @@index([applicationId, timestamp])
   @@index([applicationId, level])
   @@index([timestamp])
-  @@index([traceId])
-  @@index([spanId])
-  @@index([commit])
 }
 
 /**
@@ -323,8 +341,6 @@ model ContactRequest {
   user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([email])
-  @@index([company])
-  @@index([createdAt])
 }
 
 /**
@@ -342,7 +358,6 @@ model EmailOtp {
   createdAt DateTime @default(now())
 
   @@index([email])
-  @@index([email, code])
 }
 
 /**

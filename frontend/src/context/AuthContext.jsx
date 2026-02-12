@@ -11,10 +11,6 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const API_URL = import.meta.env.VITE_API_URL;
 
-  /* =====================================================
-     DEBUG LOGGER
-  ===================================================== */
-
   const log = (...args) =>
     console.log("%c[AUTH DEBUG]", "color:#8b5cf6;font-weight:bold", ...args);
 
@@ -22,29 +18,25 @@ export function AuthProvider({ children }) {
      STATE
   ===================================================== */
 
-  const [token, setToken] = useState(() => {
-    const stored = localStorage.getItem("token");
-    console.log("[AUTH INIT] token from storage:", stored);
-    return stored || null;
-  });
+  const [token, setToken] = useState(() => localStorage.getItem("token"));
 
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem("user");
-    console.log("[AUTH INIT] user from storage:", stored);
     return stored ? JSON.parse(stored) : null;
   });
 
   const [tempMfaSession, setTempMfaSessionState] = useState(() => {
     const stored = sessionStorage.getItem("mfaSession");
-    console.log("[AUTH INIT] MFA session:", stored);
     return stored ? JSON.parse(stored) : null;
   });
+
+  // ⭐ CRITICAL — prevents UI rendering before profile loads
+  const [initializing, setInitializing] = useState(true);
 
   const [hydrating, setHydrating] = useState(false);
 
   /* =====================================================
-     REFRESH USER — SINGLE SOURCE OF TRUTH
-     Always fetch from backend
+     FETCH USER (SINGLE SOURCE OF TRUTH)
   ===================================================== */
 
   const refreshUser = useCallback(async () => {
@@ -58,10 +50,15 @@ export function AuthProvider({ children }) {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
       });
 
       if (!res.ok) {
         log("Profile refresh failed:", res.status);
+
+        // clear stale state
+        localStorage.removeItem("user");
+        setUser(null);
         return;
       }
 
@@ -73,14 +70,17 @@ export function AuthProvider({ children }) {
       log("User updated:", data);
     } catch (err) {
       log("Profile refresh error:", err);
+
+      // clear stale state
+      localStorage.removeItem("user");
+      setUser(null);
     } finally {
       setHydrating(false);
     }
   }, [token, API_URL]);
 
   /* =====================================================
-     LOGIN
-     Saves token → syncs user from backend
+     LOGIN (FIXED — wait for token update)
   ===================================================== */
 
   const login = async (jwt, userData = null) => {
@@ -89,18 +89,13 @@ export function AuthProvider({ children }) {
     localStorage.setItem("token", jwt);
     setToken(jwt);
 
-    // temporary user until backend sync
     if (userData) {
-      localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
     }
 
-    // clear MFA temp session
     sessionStorage.removeItem("mfaSession");
     setTempMfaSessionState(null);
-
-    // always sync full profile from backend
-    await refreshUser();
   };
 
   /* =====================================================
@@ -108,13 +103,11 @@ export function AuthProvider({ children }) {
   ===================================================== */
 
   const setTempMfaSession = (session) => {
-    log("Setting MFA temp session:", session);
     sessionStorage.setItem("mfaSession", JSON.stringify(session));
     setTempMfaSessionState(session);
   };
 
   const clearTempMfaSession = () => {
-    log("Clearing MFA temp session");
     sessionStorage.removeItem("mfaSession");
     setTempMfaSessionState(null);
   };
@@ -153,7 +146,7 @@ export function AuthProvider({ children }) {
       const payload = JSON.parse(atob(token.split(".")[1]));
 
       if (payload.exp * 1000 < Date.now()) {
-        log("Token expired → logging out");
+        log("Token expired → logout");
         logout();
       }
     } catch {
@@ -162,17 +155,22 @@ export function AuthProvider({ children }) {
   }, [token, logout]);
 
   /* =====================================================
-     AUTO HYDRATE USER ON APP LOAD (FIXED)
-     Always fetch user if token exists
+     AUTO HYDRATE USER (FIXED — proper initialization)
   ===================================================== */
 
   useEffect(() => {
-    if (!token) {
-      setUser(null);
-      return;
-    }
+    const init = async () => {
+      if (!token) {
+        setUser(null);
+        setInitializing(false);
+        return;
+      }
 
-    refreshUser();
+      await refreshUser();
+      setInitializing(false);
+    };
+
+    init();
   }, [token, refreshUser]);
 
   /* =====================================================
@@ -182,6 +180,8 @@ export function AuthProvider({ children }) {
   const value = {
     token,
     user,
+
+    initializing, // ⭐ use this in UI
     hydrating,
 
     isAuthenticated: Boolean(token),

@@ -1,8 +1,9 @@
 // src/components/settings/ProfileSettings.jsx
+
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-import { getProfile, updateProfile } from "@/api/profile";
+import { updateProfile } from "@/api/profile";
 import { fetchCountries, fetchStates } from "@/api/geodata";
 import { useAuth } from "@/context/AuthContext";
 
@@ -24,16 +25,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Mail, MapPin, User, ShieldCheck } from "lucide-react";
 
 export default function ProfileSettings() {
-  const { user } = (() => {
-    try {
-      return useAuth();
-    } catch {
-      return { user: null };
-    }
-  })();
+  /* =====================================================
+     AUTH — SINGLE SOURCE OF TRUTH
+  ===================================================== */
 
-  const [profile, setProfile] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const { user, refreshUser, hydrating } = useAuth();
+
+  const profile = user?.profile || {};
+
+  /* =====================================================
+     LOCAL STATE
+  ===================================================== */
 
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState({});
@@ -44,23 +46,10 @@ export default function ProfileSettings() {
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
 
-  /* ================= LOAD PROFILE ================= */
-  useEffect(() => {
-    let mounted = true;
-    setLoadingProfile(true);
+  /* =====================================================
+     LOAD COUNTRIES
+  ===================================================== */
 
-    getProfile()
-      .then((data) => {
-        if (!mounted) return;
-        setProfile(data || {});
-      })
-      .catch(() => toast.error("Failed to load profile"))
-      .finally(() => mounted && setLoadingProfile(false));
-
-    return () => (mounted = false);
-  }, []);
-
-  /* ================= LOAD COUNTRIES ================= */
   useEffect(() => {
     let mounted = true;
     setLoadingCountries(true);
@@ -72,7 +61,10 @@ export default function ProfileSettings() {
     return () => (mounted = false);
   }, []);
 
-  /* ================= LOAD STATES ================= */
+  /* =====================================================
+     LOAD STATES WHEN COUNTRY CHANGES
+  ===================================================== */
+
   useEffect(() => {
     if (!form?.countryCode) {
       setStates([]);
@@ -92,14 +84,17 @@ export default function ProfileSettings() {
     return () => (mounted = false);
   }, [form?.countryCode, countries]);
 
+  /* =====================================================
+     OPEN EDIT MODAL (FIXED)
+  ===================================================== */
+
   function openEdit() {
     setForm({
       firstName: profile?.firstName || "",
       lastName: profile?.lastName || "",
-      username: profile?.username || "",
-      email: user?.email || profile?.email || "",
+      username: user?.username || "", // ⭐ FIXED
+      email: user?.email || "",
       countryCode: profile?.countryCode || "",
-      country: profile?.country || "",
       state: profile?.state || "",
     });
 
@@ -112,8 +107,13 @@ export default function ProfileSettings() {
     setEditOpen(true);
   }
 
+  /* =====================================================
+     SAVE PROFILE (ENTERPRISE SAFE)
+  ===================================================== */
+
   async function handleSave() {
     setSaving(true);
+
     try {
       const payload = {
         firstName: form.firstName || null,
@@ -127,14 +127,12 @@ export default function ProfileSettings() {
 
       await updateProfile(payload);
 
-      setProfile((prev) => ({
-        ...(prev || {}),
-        ...payload,
-        email: form.email || prev?.email,
-      }));
+      // ⭐ ALWAYS REFRESH GLOBAL USER
+      await refreshUser();
 
       setEditOpen(false);
-      toast.success("Profile updated successfully");
+      toast.success("Your profile saved successfully");
+
     } catch (err) {
       toast.error(err?.message || "Failed to save profile");
     } finally {
@@ -142,11 +140,26 @@ export default function ProfileSettings() {
     }
   }
 
+  /* =====================================================
+     DERIVED VALUES
+  ===================================================== */
+
   const fullName =
     `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() ||
     "Unnamed User";
 
-  /* ================= UI ================= */
+  if (hydrating) {
+    return (
+      <div className="p-8">
+        <Skeleton className="w-64 h-8" />
+      </div>
+    );
+  }
+
+  /* =====================================================
+     UI
+  ===================================================== */
+
   return (
     <div className="max-w-5xl px-4 py-8 mx-auto space-y-8">
 
@@ -165,19 +178,14 @@ export default function ProfileSettings() {
             </div>
 
             <div>
-              {loadingProfile ? (
-                <Skeleton className="w-40 h-6" />
-              ) : (
-                <>
-                  <h2 className="text-2xl font-bold">{fullName}</h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="secondary" className="gap-1">
-                      <ShieldCheck className="w-3 h-3" />
-                      Verified
-                    </Badge>
-                  </div>
-                </>
-              )}
+              <h2 className="text-2xl font-bold">{fullName}</h2>
+
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  Verified
+                </Badge>
+              </div>
             </div>
           </div>
 
@@ -199,8 +207,8 @@ export default function ProfileSettings() {
           </CardHeader>
 
           <CardContent className="space-y-4 text-sm">
-            <InfoRow icon={User} label="Username" value={profile?.username} />
-            <InfoRow icon={Mail} label="Email" value={user?.email || profile?.email} />
+            <InfoRow icon={User} label="Username" value={user?.username} />
+            <InfoRow icon={Mail} label="Email" value={user?.email} />
             <InfoRow
               icon={MapPin}
               label="Location"
@@ -237,7 +245,7 @@ export default function ProfileSettings() {
         </Card>
       </div>
 
-      {/* MODAL */}
+      {/* EDIT MODAL */}
       <EditProfileModal
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -249,13 +257,19 @@ export default function ProfileSettings() {
         states={states}
         loadingCountries={loadingCountries}
         loadingStates={loadingStates}
-        originalValues={profile}
+        originalValues={{
+          ...profile,
+          username: user?.username,
+        }}
       />
     </div>
   );
 }
 
-/* Small reusable row component */
+/* =====================================================
+   SMALL REUSABLE ROW
+===================================================== */
+
 function InfoRow({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center justify-between">

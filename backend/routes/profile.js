@@ -4,9 +4,9 @@ const router = express.Router();
 const requireAuth = require("../middlewares/requireAuth");
 const prisma = require("../utils/prisma");
 
-/* --------------------------------------------------
-   RESPONSE HELPER (keeps API consistent)
--------------------------------------------------- */
+/* ======================================================
+   RESPONSE HELPER (CONSISTENT API RESPONSE)
+====================================================== */
 
 function formatUserResponse(user) {
   return {
@@ -14,14 +14,19 @@ function formatUserResponse(user) {
     email: user.email,
     username: user.username,
     role: user.role,
-    mfaEnabled: user.mfaEnabled, // ⭐ REQUIRED FOR UI TOGGLE
+
+    // ⭐ REQUIRED FOR FRONTEND SECURITY SETTINGS
+    provider: user.provider || "credentials",
+    mfaEnabled: user.mfaEnabled,
+
     profile: user.profile || {},
   };
 }
 
-/* --------------------------------------------------
-   GET current user's profile
--------------------------------------------------- */
+/* ======================================================
+   GET CURRENT USER PROFILE
+   Route: GET /api/profile
+====================================================== */
 
 router.get("/", requireAuth, async (req, res) => {
   try {
@@ -42,9 +47,37 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-/* --------------------------------------------------
-   UPDATE current user's profile
--------------------------------------------------- */
+/* ======================================================
+   GET CURRENT USER PROFILE (ALIAS)
+   Route: GET /api/profile/me
+   → Used by ChangePasswordButton
+====================================================== */
+
+router.get("/me", requireAuth, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: { profile: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      account: formatUserResponse(user),
+    });
+
+  } catch (err) {
+    console.error("GET /api/profile/me error:", err);
+    res.status(500).json({ message: "Failed to fetch profile" });
+  }
+});
+
+/* ======================================================
+   UPDATE CURRENT USER PROFILE
+   Route: PUT /api/profile
+====================================================== */
 
 router.put("/", requireAuth, async (req, res) => {
   try {
@@ -57,7 +90,7 @@ router.put("/", requireAuth, async (req, res) => {
       country,
       countryCode,
       state,
-    } = req.body;
+    } = req.body || {};
 
     if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json({
@@ -66,7 +99,7 @@ router.put("/", requireAuth, async (req, res) => {
     }
 
     /* ------------------------------------------
-       Update username
+       UPDATE USERNAME (SAFE NORMALIZATION)
     ------------------------------------------ */
 
     if (username) {
@@ -87,7 +120,7 @@ router.put("/", requireAuth, async (req, res) => {
     }
 
     /* ------------------------------------------
-       Upsert profile
+       UPSERT PROFILE
     ------------------------------------------ */
 
     await prisma.userProfile.upsert({
@@ -110,8 +143,7 @@ router.put("/", requireAuth, async (req, res) => {
     });
 
     /* ------------------------------------------
-       RETURN FULL UPDATED USER
-       ⭐ CRITICAL FIX
+       RETURN UPDATED USER
     ------------------------------------------ */
 
     const updatedUser = await prisma.user.findUnique({

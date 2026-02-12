@@ -9,19 +9,46 @@ const prisma = require("../utils/prisma");
 const requireAuth = require("../middlewares/requireAuth");
 
 /* =====================================================
-   Helpers
+   HELPERS
 ===================================================== */
 
+/**
+ * Hash API key for verification
+ */
 function hashApiKey(rawKey) {
   const secret = process.env.API_KEY_SECRET;
-  if (!secret) {
-    throw new Error("API_KEY_SECRET not configured");
-  }
+  if (!secret) throw new Error("API_KEY_SECRET not configured");
+
   return crypto.createHmac("sha256", secret).update(rawKey).digest("hex");
 }
 
+/**
+ * Extract API key from request
+ * Supports:
+ * - Authorization: Bearer xxx
+ * - x-api-key header
+ * - query ?key=
+ */
+function extractApiKey(req) {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.split(" ")[1];
+  }
+
+  return req.headers["x-api-key"] || req.query.key || null;
+}
+
+/**
+ * Normalize log level → match Prisma enum
+ */
+function normalizeLogLevel(level) {
+  if (!level) return "INFO";
+  return level.toUpperCase();
+}
+
 /* =====================================================
-   Access Control
+   ACCESS CONTROL
 ===================================================== */
 
 async function getAppWithAccess(appId, user) {
@@ -48,11 +75,11 @@ async function getAppWithAccess(appId, user) {
 }
 
 /* =====================================================
-   Schemas
+   VALIDATION SCHEMAS
 ===================================================== */
 
 const LogSchema = z.object({
-  level: z.enum(["error", "warn", "info", "debug"]),
+  level: z.enum(["error", "warn", "info", "debug"]).optional(),
   message: z.string().min(1),
   resourceId: z.string().optional(),
   timestamp: z.string().datetime(),
@@ -61,6 +88,14 @@ const LogSchema = z.object({
   commit: z.string().optional(),
   metadata: z.record(z.any()).optional(),
 });
+
+/**
+ * Supports single log OR batch logs
+ */
+const IngestSchema = z.union([
+  LogSchema,
+  z.array(LogSchema).min(1),
+]);
 
 const QuerySchema = z.object({
   applicationId: z.string(),
@@ -78,16 +113,18 @@ const QuerySchema = z.object({
 });
 
 /* =====================================================
-   INGEST LOGS (API KEY BASED)
+   INGEST LOGS (API KEY BASED — SAAS CORE)
 ===================================================== */
 
 router.post("/ingest", async (req, res) => {
-  const apiKey = req.headers["x-api-key"];
+  const apiKey = extractApiKey(req);
+
   if (!apiKey) {
     return res.status(401).json({ error: "Missing API key" });
   }
 
-  const parsed = LogSchema.safeParse(req.body);
+  const parsed = IngestSchema.safeParse(req.body);
+
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid log format" });
   }
@@ -108,20 +145,42 @@ router.post("/ingest", async (req, res) => {
       return res.status(401).json({ error: "Invalid API key" });
     }
 
-    const log = await prisma.log.create({
-      data: {
-        ...parsed.data,
-        timestamp: new Date(parsed.data.timestamp),
-        applicationId: keyRecord.applicationId,
-      },
-    });
+    const logsArray = Array.isArray(parsed.data)
+      ? parsed.data
+      : [parsed.data];
+
+    /* ------------------------------------------
+       Insert logs
+    ------------------------------------------ */
+
+    const createdLogs = await prisma.$transaction(
+      logsArray.map((log) =>
+        prisma.log.create({
+          data: {
+            ...log,
+            level: normalizeLogLevel(log.level),
+            timestamp: new Date(log.timestamp),
+            applicationId: keyRecord.applicationId,
+          },
+        })
+      )
+    );
+
+    /* ------------------------------------------
+       Realtime push (WebSocket)
+    ------------------------------------------ */
 
     const io = req.app.get("io");
     if (io) {
-      io.to(`app:${keyRecord.applicationId}`).emit("new_log", log);
+      createdLogs.forEach((log) => {
+        io.to(`app:${keyRecord.applicationId}`).emit("new_log", log);
+      });
     }
 
-    return res.status(201).json({ success: true, id: log.id });
+    return res.status(201).json({
+      success: true,
+      count: createdLogs.length,
+    });
 
   } catch (err) {
     console.error("Ingest failed:", err);
@@ -134,7 +193,6 @@ router.post("/ingest", async (req, res) => {
 ===================================================== */
 
 router.get("/", requireAuth, async (req, res) => {
-
   const parsedQuery = QuerySchema.safeParse(req.query);
 
   if (!parsedQuery.success) {
@@ -156,9 +214,8 @@ router.get("/", requireAuth, async (req, res) => {
   }
 
   try {
-
     /* ------------------------------------------
-       Strict Access Validation
+       Access validation
     ------------------------------------------ */
 
     const app = await getAppWithAccess(applicationId, req.user);
@@ -176,15 +233,15 @@ router.get("/", requireAuth, async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     /* ------------------------------------------
-       Build WHERE
+       Build WHERE clause
     ------------------------------------------ */
 
     const where = {
-      applicationId: app.id, // enforce resolved ID
+      applicationId: app.id,
     };
 
     if (parsedQuery.data.level) {
-      where.level = parsedQuery.data.level;
+      where.level = parsedQuery.data.level.toUpperCase();
     }
 
     if (parsedQuery.data.resourceId) {
@@ -194,17 +251,9 @@ router.get("/", requireAuth, async (req, res) => {
       };
     }
 
-    if (parsedQuery.data.traceId) {
-      where.traceId = parsedQuery.data.traceId;
-    }
-
-    if (parsedQuery.data.spanId) {
-      where.spanId = parsedQuery.data.spanId;
-    }
-
-    if (parsedQuery.data.commit) {
-      where.commit = parsedQuery.data.commit;
-    }
+    if (parsedQuery.data.traceId) where.traceId = parsedQuery.data.traceId;
+    if (parsedQuery.data.spanId) where.spanId = parsedQuery.data.spanId;
+    if (parsedQuery.data.commit) where.commit = parsedQuery.data.commit;
 
     if (from || to) {
       where.timestamp = {};
@@ -223,7 +272,7 @@ router.get("/", requireAuth, async (req, res) => {
     }
 
     /* ------------------------------------------
-       Query
+       Query DB
     ------------------------------------------ */
 
     const [logs, total] = await Promise.all([

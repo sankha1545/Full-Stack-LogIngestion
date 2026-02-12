@@ -15,6 +15,9 @@ import {
 
 import { Menu, LogOut, User, Settings } from "lucide-react";
 
+/* NEW — GLOBAL TOAST SYSTEM */
+import { Toaster } from "react-hot-toast";
+
 export default function App() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
@@ -50,108 +53,126 @@ export default function App() {
   }, []);
 
   /* =====================================================
-     OPTIONAL: HARD SAFETY CHECK
-     (Prevents ghost session UI)
+     HARD SAFETY CHECK
+     Prevents ghost session UI if token expires
+     (important after password change / forced logout)
   ===================================================== */
 
   useEffect(() => {
-    if (!user) return;
-    // If user disappears for any reason, redirect cleanly
-  }, [user]);
+    if (user === null) {
+      // user explicitly removed → redirect to login
+      navigate("/login", { replace: true });
+    }
+  }, [user, navigate]);
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900">
+    <>
+      {/* ================= GLOBAL TOASTS ================= */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#fff",
+            color: "#0f172a",
+            border: "1px solid #e2e8f0",
+          },
+        }}
+      />
 
-      {/* ================= DESKTOP SIDEBAR ================= */}
-      <div className="hidden lg:block">
-        <Sidebar />
-      </div>
+      <div className="flex min-h-screen bg-slate-50 text-slate-900">
 
-      {/* ================= MAIN ================= */}
-      <div className="flex flex-col flex-1 w-full">
+        {/* ================= DESKTOP SIDEBAR ================= */}
+        <div className="hidden lg:block">
+          <Sidebar />
+        </div>
 
-        {/* ================= HEADER ================= */}
-        <header className="sticky top-0 z-40 flex items-center h-16 gap-3 px-4 bg-white border-b sm:px-6">
+        {/* ================= MAIN ================= */}
+        <div className="flex flex-col flex-1 w-full">
 
-          {/* Mobile sidebar toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden hover:bg-slate-100 focus-visible:ring-0"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
+          {/* ================= HEADER ================= */}
+          <header className="sticky top-0 z-40 flex items-center h-16 gap-3 px-4 bg-white border-b sm:px-6">
 
-          {/* Brand */}
-          <div className="flex flex-col leading-tight">
-            <span className="text-base font-semibold tracking-tight">
-              LogScope
-            </span>
-            <span className="text-xs text-slate-500">
-              Real-time log ingestion & querying
-            </span>
-          </div>
-
-          <div className="flex-1" />
-
-          {/* ================= ACCOUNT DROPDOWN ================= */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 bg-transparent hover:bg-slate-100 focus-visible:ring-0"
-              >
-                <User className="w-4 h-4" />
-                {user?.email || "Account"}
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent
-              align="end"
-              className="bg-white border shadow-lg w-52"
+            {/* Mobile sidebar toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden hover:bg-slate-100 focus-visible:ring-0"
+              onClick={() => setSidebarOpen(true)}
             >
-              <DropdownMenuItem
-                onClick={() => navigate("/settings")}
-                className="cursor-pointer focus:bg-slate-100"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Profile settings
-              </DropdownMenuItem>
+              <Menu className="w-5 h-5" />
+            </Button>
 
-              <DropdownMenuItem
-                onClick={() => setLogoutOpen(true)}
-                className="text-red-600 cursor-pointer focus:bg-red-50"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
+            {/* Brand */}
+            <div className="flex flex-col leading-tight">
+              <span className="text-base font-semibold tracking-tight">
+                LogScope
+              </span>
+              <span className="text-xs text-slate-500">
+                Real-time log ingestion & querying
+              </span>
+            </div>
 
-        {/* ================= CONTENT ================= */}
-        <main className="flex-1 p-4 overflow-auto bg-slate-100 sm:p-6 lg:p-8">
-          <div className="mx-auto w-full max-w-[1600px]">
-            <Outlet />
-          </div>
-        </main>
+            <div className="flex-1" />
+
+            {/* ================= ACCOUNT DROPDOWN ================= */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 bg-transparent hover:bg-slate-100 focus-visible:ring-0"
+                >
+                  <User className="w-4 h-4" />
+                  {user?.email || "Account"}
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                align="end"
+                className="bg-white border shadow-lg w-52"
+              >
+                <DropdownMenuItem
+                  onClick={() => navigate("/settings")}
+                  className="cursor-pointer focus:bg-slate-100"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Profile settings
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => setLogoutOpen(true)}
+                  className="text-red-600 cursor-pointer focus:bg-red-50"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </header>
+
+          {/* ================= CONTENT ================= */}
+          <main className="flex-1 p-4 overflow-auto bg-slate-100 sm:p-6 lg:p-8">
+            <div className="mx-auto w-full max-w-[1600px]">
+              <Outlet />
+            </div>
+          </main>
+        </div>
+
+        {/* ================= MOBILE SIDEBAR ================= */}
+        <Sidebar
+          mobile
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+
+        {/* ================= LOGOUT MODAL ================= */}
+        <ConfirmLogoutModal
+          open={logoutOpen}
+          onOpenChange={setLogoutOpen}
+          onConfirm={handleLogout}
+        />
       </div>
-
-      {/* ================= MOBILE SIDEBAR ================= */}
-      <Sidebar
-        mobile
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-
-      {/* ================= LOGOUT MODAL ================= */}
-      <ConfirmLogoutModal
-        open={logoutOpen}
-        onOpenChange={setLogoutOpen}
-        onConfirm={handleLogout}
-      />
-    </div>
+    </>
   );
 }

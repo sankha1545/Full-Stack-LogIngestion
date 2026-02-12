@@ -5,12 +5,13 @@ import geoRoutes from "./geo.js";
 import logRoutes from "./logs.js";
 import cliRoutes from "./cli.js";
 import profileRoutes from "./profile.js";
+import passwordRoutes from "./password.js";
 
 export default function registerRoutes(app) {
   // Auth & OAuth
   app.use("/api/auth", authRoutes);
   app.use("/api/oauth", oauthRoutes);
-
+  router.use("/password", passwordRoutes);
   // Public / semi-public
   app.use("/api/contact", contactRoutes);
   app.use("/api/geo", geoRoutes);

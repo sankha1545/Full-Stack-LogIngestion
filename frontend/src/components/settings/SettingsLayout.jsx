@@ -1,12 +1,36 @@
 import { Outlet } from "react-router-dom";
 import SettingsSidebar from "@/components/settings/SettingsSidebar";
+import { useAuth } from "@/context/AuthContext";
 
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
 
+/* --------------------------------------------------
+   Simple Spinner (inline — no extra file needed)
+-------------------------------------------------- */
+
+function Spinner() {
+  return (
+    <div className="flex items-center justify-center w-full py-20">
+      <div className="w-6 h-6 border-4 border-gray-300 rounded-full border-t-black animate-spin" />
+    </div>
+  );
+}
+
 export default function SettingsLayout() {
+  const { initializing } = useAuth(); // ⭐ get auth loading state
+
+  /* --------------------------------------------------
+     WAIT FOR AUTH HYDRATION
+     Prevents blank profile after refresh
+  -------------------------------------------------- */
+
+  if (initializing) {
+    return <Spinner />;
+  }
+
   return (
     <div className="max-w-6xl px-4 py-8 mx-auto">
 

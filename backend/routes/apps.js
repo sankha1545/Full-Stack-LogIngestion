@@ -8,25 +8,58 @@ const requireAuth = require("../middlewares/requireAuth");
 const router = express.Router();
 
 /* =====================================================
-   Helpers
+   CONFIG
 ===================================================== */
 
 const MAX_APPS_PER_USER = 20;
 
+/**
+ * Base ingestion endpoint
+ * Example:
+ * http://localhost:3001/api/logs/ingest
+ */
+const BASE_INGEST_URL =
+  process.env.LOGSCOPE_INGEST_URL ||
+  "http://localhost:3001/api/logs/ingest";
+
+/* =====================================================
+   HELPERS
+===================================================== */
+
+/**
+ * Generate secure raw API key
+ */
 function generateApiKey() {
-  return crypto.randomBytes(32).toString("hex");
+  return "ls_" + crypto.randomBytes(32).toString("hex");
 }
 
+/**
+ * Hash API key for storage
+ */
 function hashApiKey(rawKey) {
   const secret = process.env.API_KEY_SECRET;
-  if (!secret) {
-    throw new Error("API_KEY_SECRET not configured");
-  }
+  if (!secret) throw new Error("API_KEY_SECRET not configured");
+
   return crypto.createHmac("sha256", secret).update(rawKey).digest("hex");
 }
 
+/**
+ * Generate key preview for UI
+ * Example: ls_8f3a...91ab
+ */
+function generateKeyPreview(key) {
+  return `${key.slice(0, 6)}...${key.slice(-4)}`;
+}
+
+/**
+ * Generate connection string for SDK usage
+ */
+function generateConnectionString(apiKey) {
+  return `${BASE_INGEST_URL}?key=${apiKey}`;
+}
+
 /* =====================================================
-   Access Control (Strict Multi-Tenant)
+   ACCESS CONTROL (STRICT MULTI-TENANT)
 ===================================================== */
 
 async function getAppWithAccess(appId, user) {
@@ -66,7 +99,7 @@ function getUserAppRole(app, user) {
 }
 
 /* =====================================================
-   CREATE APPLICATION
+   CREATE APPLICATION (SAAS CORE)
 ===================================================== */
 
 router.post("/", requireAuth, async (req, res) => {
@@ -77,14 +110,14 @@ router.post("/", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Application name required" });
     }
 
-    // 🚫 Block master admin from creating apps
+    // Block master admin from creating apps
     if (req.user.role === "MASTER_ADMIN") {
       return res.status(403).json({
         error: "Master admin cannot create applications",
       });
     }
 
-    // 🔥 Enforce 20 app limit
+    // Enforce per-user app limit
     const appCount = await prisma.application.count({
       where: {
         userId: req.user.id,
@@ -98,16 +131,30 @@ router.post("/", requireAuth, async (req, res) => {
       });
     }
 
+    /* ===============================
+       Generate API key + connection
+    =============================== */
+
     const rawKey = generateApiKey();
     const keyHash = hashApiKey(rawKey);
+    const keyPreview = generateKeyPreview(rawKey);
+    const connectionString = generateConnectionString(rawKey);
+
+    /* ===============================
+       Create application
+    =============================== */
 
     const created = await prisma.application.create({
       data: {
         name: name.trim(),
         environment: environment || "DEVELOPMENT",
         userId: req.user.id,
+        connectionUrl: BASE_INGEST_URL,
         apiKeys: {
-          create: { keyHash },
+          create: {
+            keyHash,
+            keyPreview,
+          },
         },
       },
       select: {
@@ -115,12 +162,20 @@ router.post("/", requireAuth, async (req, res) => {
         name: true,
         environment: true,
         createdAt: true,
+        connectionUrl: true,
       },
     });
 
     return res.status(201).json({
       ...created,
-      apiKey: rawKey, // shown once
+
+      /**
+       * Show only once to user
+       */
+      apiKey: rawKey,
+      connectionString,
+
+      message: "Save your API key securely. It will not be shown again.",
     });
 
   } catch (err) {
@@ -136,24 +191,26 @@ router.post("/", requireAuth, async (req, res) => {
 router.get("/", requireAuth, async (req, res) => {
   try {
     const apps = await prisma.application.findMany({
-      where: req.user.role === "MASTER_ADMIN"
-        ? { deleted: false }
-        : {
-            deleted: false,
-            OR: [
-              { userId: req.user.id },
-              {
-                members: {
-                  some: { userId: req.user.id },
+      where:
+        req.user.role === "MASTER_ADMIN"
+          ? { deleted: false }
+          : {
+              deleted: false,
+              OR: [
+                { userId: req.user.id },
+                {
+                  members: {
+                    some: { userId: req.user.id },
+                  },
                 },
-              },
-            ],
-          },
+              ],
+            },
       select: {
         id: true,
         name: true,
         environment: true,
         createdAt: true,
+        connectionUrl: true,
         userId: req.user.role === "MASTER_ADMIN" ? true : false,
       },
       orderBy: { createdAt: "desc" },
@@ -182,6 +239,7 @@ router.get("/:id", requireAuth, async (req, res) => {
         apiKeys: {
           select: {
             id: true,
+            keyPreview: true,
             revoked: true,
             rotatedAt: true,
             createdAt: true,
@@ -199,7 +257,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 });
 
 /* =====================================================
-   ROTATE API KEY (ADMIN OR OWNER ONLY)
+   ROTATE API KEY (ADMIN OR OWNER)
 ===================================================== */
 
 router.post("/:id/rotate", requireAuth, async (req, res) => {
@@ -215,7 +273,10 @@ router.post("/:id/rotate", requireAuth, async (req, res) => {
 
     const rawKey = generateApiKey();
     const keyHash = hashApiKey(rawKey);
+    const keyPreview = generateKeyPreview(rawKey);
+    const connectionString = generateConnectionString(rawKey);
 
+    // revoke old keys
     await prisma.apiKey.updateMany({
       where: {
         applicationId: app.id,
@@ -227,14 +288,20 @@ router.post("/:id/rotate", requireAuth, async (req, res) => {
       },
     });
 
+    // create new key
     await prisma.apiKey.create({
       data: {
         applicationId: app.id,
         keyHash,
+        keyPreview,
       },
     });
 
-    res.json({ apiKey: rawKey });
+    res.json({
+      apiKey: rawKey,
+      connectionString,
+      message: "API key rotated successfully",
+    });
 
   } catch (err) {
     console.error("Rotate key error:", err);
