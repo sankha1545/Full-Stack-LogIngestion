@@ -1,62 +1,56 @@
-import { useState, useEffect } from "react";
-import { useLogs } from "../hooks/useLogs";
-import FilterBar from "../components/FilterBar/FilterBar";
-import LogsList from "../components/LogsList/LogsList";
+import { useEffect, useState } from "react";
+import { getApps, deleteApp, rotateApiKey } from "@/api/appsApi";
+import AppCard from "@/components/apps/AppCard";
+import CreateAppDialog from "@/components/apps/CreateAppDialog";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
-  const [filters, setFilters] = useState({});
-  const { logs, loading } = useLogs(filters);
+  const [apps, setApps] = useState([]);
+  const [open, setOpen] = useState(false);
 
-  const [page, setPage] = useState(1);
-
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("theme") || "dark"
-  );
+  async function loadApps() {
+    const data = await getApps();
+    setApps(data);
+  }
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+    loadApps();
+  }, []);
 
-  // reset page when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [filters]);
+  async function handleDelete(id) {
+    if (!confirm("Delete this app?")) return;
+    await deleteApp(id);
+    loadApps();
+  }
 
-  // 🔥 THIS IS THE MISSING PIECE
-  // reset page when logs change (socket / refresh)
-  useEffect(() => {
-    setPage(1);
-  }, [logs.length]);
+  async function handleRotate(id) {
+    const res = await rotateApiKey(id);
+    alert("New API Key: " + res.apiKey);
+  }
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">Logs</h1>
-          <p className="text-sm text-slate-500">
-            Real-time Log Ingestion & Querying
-          </p>
-        </div>
-      </header>
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Applications</h1>
+        <Button onClick={() => setOpen(true)}>Add App</Button>
+      </div>
 
-      <section className="p-4 bg-white border shadow dark:bg-slate-900 border-slate-300 dark:border-slate-800 rounded-xl">
-        <FilterBar
-          filters={filters}
-          setFilters={(f) => setFilters({ ...f })}
-        />
-      </section>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {apps.map((app) => (
+          <AppCard
+            key={app.id}
+            app={app}
+            onDelete={handleDelete}
+            onRotate={handleRotate}
+          />
+        ))}
+      </div>
 
-      <section className="overflow-hidden bg-white border shadow dark:bg-slate-900 border-slate-300 dark:border-slate-800 rounded-xl text-slate-900 dark:text-slate-100">
-        <LogsList
-          logs={logs}
-          loading={loading}
-          page={page}
-          setPage={setPage}
-        />
-      </section>
+      <CreateAppDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        onCreated={loadApps}
+      />
     </div>
   );
 }

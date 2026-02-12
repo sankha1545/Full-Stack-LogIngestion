@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Input } from "@/components/ui/input";
@@ -19,17 +19,17 @@ import AuthLayout from "@/components/auth/AuthLayout";
 import OAuthButtons from "../OAuthButtons";
 
 import { useAuth } from "@/context/AuthContext";
-import { login } from "@/api/authApi";
+import { login as loginApi } from "@/api/authApi";
 
-/**
- * Login page
- * - Email + password login
- * - OAuth (Google / GitHub)
- * - Show / hide password
- * - Forgot password flow
- */
 export default function Login() {
-  const { login: saveToken } = useAuth();
+  const {
+    token,
+    user,
+    login: saveSession,
+    setTempMfaSession,
+    clearTempMfaSession,
+  } = useAuth();
+
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -38,9 +38,21 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  /* ----------------------------------------
-     Submit email/password login
-  ---------------------------------------- */
+  /* =====================================================
+     🚀 AUTO REDIRECT IF ALREADY AUTHENTICATED
+  ===================================================== */
+
+  useEffect(() => {
+    if (token && user) {
+      console.log("[LOGIN] Already authenticated → redirecting");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [token, user, navigate]);
+
+  /* =====================================================
+     SUBMIT LOGIN
+  ===================================================== */
+
   async function submit(e) {
     e.preventDefault();
     if (loading) return;
@@ -49,21 +61,69 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const token = await login(email, password);
-      saveToken(token);
-      navigate("/dashboard");
+      const response = await loginApi(email, password);
+
+      /* ==============================
+         MFA REQUIRED FLOW
+      ============================== */
+      if (response?.mfaRequired) {
+        setTempMfaSession({
+          tempToken: response.tempToken,
+          email,
+        });
+
+        toast("Multi-factor authentication required", {
+          icon: "🔐",
+        });
+
+        navigate("/mfa-verify", { replace: true });
+        return;
+      }
+
+      /* ==============================
+         NORMAL LOGIN FLOW
+      ============================== */
+      if (response?.token) {
+        clearTempMfaSession();
+
+        saveSession(response.token, response.user);
+
+        toast.success("Login successful");
+
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      throw new Error("Unexpected authentication response");
+
     } catch (err) {
-      const msg = err?.message || "Invalid credentials";
-      setError(msg);
-      toast.error(msg);
+      const backendError =
+        err?.response?.data?.error ||
+        err?.message ||
+        "Invalid credentials";
+
+      const lockedUntil = err?.response?.data?.lockedUntil;
+
+      if (lockedUntil) {
+        toast.error(
+          `Account locked until ${new Date(
+            lockedUntil
+          ).toLocaleTimeString()}`
+        );
+      } else {
+        toast.error(backendError);
+      }
+
+      setError(backendError);
     } finally {
       setLoading(false);
     }
   }
 
-  /* ----------------------------------------
-     Forgot password
-  ---------------------------------------- */
+  /* =====================================================
+     FORGOT PASSWORD
+  ===================================================== */
+
   const handleForgotPassword = () => {
     if (!email) {
       toast("Enter your email first", { icon: "📧" });
@@ -71,6 +131,10 @@ export default function Login() {
     }
     navigate("/forgot-password", { state: { email } });
   };
+
+  /* =====================================================
+     UI
+  ===================================================== */
 
   return (
     <AuthLayout
@@ -80,28 +144,27 @@ export default function Login() {
       footerLinkText="Create one"
       footerLinkTo="/signup"
     >
-      {/* Error */}
       {error && (
         <div className="p-3 mb-2 text-sm text-red-400 border rounded bg-red-500/10 border-red-500/20">
           {error}
         </div>
       )}
 
-      {/* OAuth (Google / GitHub) */}
       <OAuthButtons />
 
-      {/* Divider */}
       <div className="flex items-center gap-3 my-2 text-sm text-white/40">
         <div className="flex-1 h-px bg-white/10" />
         <div className="px-2 text-xs">or with email</div>
         <div className="flex-1 h-px bg-white/10" />
       </div>
 
-      {/* Email/password form */}
       <form onSubmit={submit} className="space-y-4">
+
         {/* Email */}
         <div>
-          <label className="block mb-1 text-sm text-white/70">Email</label>
+          <label className="block mb-1 text-sm text-white/70">
+            Email
+          </label>
           <div className="relative">
             <Mail className="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-white/40" />
             <Input
@@ -121,7 +184,9 @@ export default function Login() {
 
         {/* Password */}
         <div>
-          <label className="block mb-1 text-sm text-white/70">Password</label>
+          <label className="block mb-1 text-sm text-white/70">
+            Password
+          </label>
           <div className="relative">
             <Lock className="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-white/40" />
             <Input
@@ -139,7 +204,6 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
               className="absolute -translate-y-1/2 right-3 top-1/2 text-white/50 hover:text-white"
             >
               {showPassword ? (
@@ -151,7 +215,6 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Submit */}
         <Button
           type="submit"
           disabled={loading}
@@ -171,13 +234,11 @@ export default function Login() {
         </Button>
       </form>
 
-      {/* Trust */}
       <div className="flex items-center justify-center gap-2 mt-3 text-xs text-white/50">
         <ShieldCheck className="w-4 h-4 text-indigo-400" />
         Secure authentication · Encrypted sessions
       </div>
 
-      {/* Forgot password */}
       <div className="mt-2 text-sm text-center text-white/60">
         <button
           type="button"

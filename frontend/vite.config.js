@@ -9,13 +9,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-        secure: false,
-      },
+server: {
+  proxy: {
+    "/api": {
+      target: "http://127.0.0.1:3001",
+      changeOrigin: true,
+      secure: false,
     },
   },
+},
+
 });

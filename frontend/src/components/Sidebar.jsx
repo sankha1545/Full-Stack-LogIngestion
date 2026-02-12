@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
-/* shadcn-style UI primitives — replace / add if missing */
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip } from "@/components/ui/tooltip";
 
@@ -23,116 +18,143 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-/**
- * Sidebar props:
- * - mobile (bool) -> render mobile-friendly overlay behavior
- * - open (bool) -> for mobile: whether drawer is open
- * - onClose (fn) -> callback to close drawer (mobile)
- */
+/* --------------------------------------------------
+   Navigation config
+-------------------------------------------------- */
+
+const NAV_ITEMS = [
+  { label: "Dashboard", path: "/dashboard", icon: Home },
+  { label: "Analytics", path: "/analytics", icon: BarChart3 },
+  { label: "Settings", path: "/settings", icon: Settings },
+];
+
 export default function Sidebar({ mobile = false, open = false, onClose }) {
-  const [collapsed, setCollapsed] = useState(false); // desktop collapsed state
-  const navFirstRef = useRef(null);
+  const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(false);
+  const firstNavRef = useRef(null);
 
-  const links = [
-    { name: "Dashboard", path: "/", icon: Home },
-    { name: "Analytics", path: "/analytics", icon: BarChart3 },
-    { name: "Settings", path: "/settings", icon: Settings },
-  ];
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
 
-  // Close on Escape (mobile)
+  /* --------------------------------------------------
+     Load logged-in user from JWT
+  -------------------------------------------------- */
   useEffect(() => {
-    if (!mobile || !open) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        onClose?.();
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setUser(payload);
+    } catch (err) {
+      console.error("Invalid token");
+    }
+  }, []);
+
+  /* --------------------------------------------------
+     Fetch profile
+  -------------------------------------------------- */
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const res = await fetch("/api/profile", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setProfile(data);
+        }
+      } catch (err) {
+        console.error("Failed to load profile");
       }
     };
+
+    fetchProfile();
+  }, []);
+
+  /* --------------------------------------------------
+     Derived display values
+  -------------------------------------------------- */
+
+  const fullName =
+    profile?.firstName && profile?.lastName
+      ? `${profile.firstName} ${profile.lastName}`
+      : user?.username || "User";
+
+  const email = user?.email || "";
+
+  const initials = fullName
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
+
+  /* ---------------- ESC close (mobile) ---------------- */
+  useEffect(() => {
+    if (!mobile || !open) return;
+    const onKey = (e) => e.key === "Escape" && onClose?.();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mobile, open, onClose]);
 
-  // When mobile drawer opens, focus first nav item for accessibility
+  /* ---------------- Auto focus (mobile) ---------------- */
   useEffect(() => {
     if (mobile && open) {
-      setTimeout(() => navFirstRef.current?.focus?.(), 120);
+      setTimeout(() => firstNavRef.current?.focus?.(), 120);
     }
   }, [mobile, open]);
 
-  const containerClasses = collapsed
-    ? "w-20"
-    : "w-64";
-
-  const linkBase =
-    "group flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors";
-
   return (
     <>
-      {/* Mobile overlay */}
       {mobile && open && (
         <div
-          aria-hidden
-          className="fixed inset-0 z-40 bg-black/30"
-          onClick={() => onClose?.()}
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+          onClick={onClose}
         />
       )}
 
-      {/* Sidebar container */}
       <aside
         className={`
-          ${mobile ? "fixed z-50 top-0 left-0 h-full" : "sticky top-0"}
+          ${mobile ? "fixed top-0 left-0 z-[100] h-full transform transition-transform duration-300" : "sticky top-0"}
           ${mobile ? (open ? "translate-x-0" : "-translate-x-full") : ""}
-          ${!mobile ? containerClasses : "w-72"}
-          transform transition-all duration-200 ease-in-out
-          bg-white border-r shadow-sm
-          flex flex-col
+          ${collapsed && !mobile ? "w-[88px]" : "w-72"}
+          bg-white border-r flex flex-col
         `}
         style={{ minHeight: "100dvh" }}
-        aria-label="Main navigation"
       >
-        {/* Header / Brand */}
-        <div className="flex items-center justify-between px-4 py-4 border-b">
+        {/* Brand */}
+        <div className="flex items-center justify-between px-4 py-5">
           <div className="flex items-center gap-3">
-            <div
-              className={`flex items-center justify-center rounded-md ${
-                collapsed ? "w-8 h-8" : "w-10 h-10"
-              } bg-indigo-50`}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
-                className="text-indigo-600"
-              >
-                <path d="M3 12h18" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M3 6h18" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M3 18h18" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
+            <div className="relative flex items-center justify-center shadow-sm w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
+              <div className="w-5 h-5 rounded-md bg-white/90" />
             </div>
 
             {!collapsed && (
-              <div>
-                <div className="text-lg font-semibold leading-tight">
+              <div className="leading-tight">
+                <div className="text-lg font-bold tracking-tight">
                   LogScope
                 </div>
                 <div className="text-xs text-slate-500">
-                  Observability, simplified
+                  Observability platform
                 </div>
               </div>
             )}
           </div>
 
-          {/* Close / collapse controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {!mobile && (
-              <Tooltip content={collapsed ? "Expand" : "Collapse"}>
+              <Tooltip content={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setCollapsed((c) => !c)}
-                  aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  onClick={() => setCollapsed((v) => !v)}
                 >
                   {collapsed ? (
                     <ChevronRight className="w-4 h-4" />
@@ -144,12 +166,7 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
             )}
 
             {mobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onClose?.()}
-                aria-label="Close"
-              >
+              <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="w-5 h-5" />
               </Button>
             )}
@@ -157,117 +174,88 @@ export default function Sidebar({ mobile = false, open = false, onClose }) {
         </div>
 
         {/* Navigation */}
-        <ScrollArea className="flex-1 px-2 py-3">
+        <ScrollArea className="flex-1 px-3">
           <nav className="space-y-1">
-            {links.map((item, idx) => {
+            {NAV_ITEMS.map((item, idx) => {
               const Icon = item.icon;
               return (
-               <NavLink
-  to={item.path}
-  end={item.path === "/"}
-  className={({ isActive }) => {
-    const base =
-      "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors";
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  ref={idx === 0 ? firstNavRef : null}
+                  className={({ isActive }) =>
+                    `
+                      group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium
+                      transition-all
+                      ${
+                        isActive
+                          ? "bg-indigo-50 text-indigo-700"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }
+                      ${collapsed ? "justify-center" : ""}
+                    `
+                  }
+                >
+                  <span className="flex items-center justify-center transition rounded-lg w-9 h-9 group-hover:bg-white">
+                    <Icon className="w-5 h-5" />
+                  </span>
 
-    const active = isActive
-      ? "bg-indigo-600 text-white"
-      : "text-slate-700 hover:bg-slate-100";
-
-    return `${base} ${active} ${collapsed ? "justify-center" : ""}`;
-  }}
->
-  {({ isActive }) => (
-    <>
-      <span
-        className={`flex items-center justify-center rounded-md ${
-          collapsed ? "w-6 h-6" : "w-8 h-8"
-        } ${isActive ? "bg-white/10" : ""}`}
-      >
-        <Icon
-          className={`w-5 h-5 ${
-            isActive ? "text-white" : "text-slate-600"
-          }`}
-        />
-      </span>
-
-      {!collapsed && <span className="truncate">{item.name}</span>}
-    </>
-  )}
-</NavLink>
-
+                  {!collapsed && <span>{item.label}</span>}
+                </NavLink>
               );
             })}
           </nav>
 
-          <div className="px-1 mt-4">
-            <Separator />
-          </div>
+          <Separator className="my-5" />
 
-          {/* Quick actions */}
-          <div className={`mt-4 px-2 ${collapsed ? "text-center" : ""}`}>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className={`flex-1 ${collapsed ? "hidden" : ""}`}
-              >
+          <div className={`space-y-2 ${collapsed ? "text-center" : ""}`}>
+            {!collapsed && (
+              <Button className="justify-start w-full">
                 <Plus className="w-4 h-4 mr-2" />
-                New query
+                New Query
               </Button>
+            )}
 
-              <Tooltip content="Help">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-2"
-                  aria-label="Help"
-                >
-                  <HelpCircle className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-            </div>
+            <Tooltip content="Help & documentation">
+              <Button variant="ghost" size="icon" className="mx-auto">
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+            </Tooltip>
           </div>
         </ScrollArea>
 
-        {/* Footer — profile + settings */}
-        <div className="px-4 py-3 border-t">
-          <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
+        {/* Profile Section */}
+        <div className="px-4 py-4 border-t">
+          <div
+            className={`flex items-center gap-3 ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
             <Avatar className="w-9 h-9">
-              <AvatarImage src="/avatar.png" alt="You" />
-              <AvatarFallback>U</AvatarFallback>
+              <AvatarImage src="/avatar.png" />
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
-            {!collapsed ? (
+            {!collapsed && (
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium">Sankha Subhra</div>
+                <div className="text-sm font-semibold">
+                  {fullName}
+                </div>
                 <div className="text-xs truncate text-slate-500">
-                  sankhasubhradas1@gmail.com
+                  {email}
                 </div>
               </div>
-            ) : null}
+            )}
 
-            {!collapsed ? (
+            <Tooltip content="Account settings">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => {
-                  // navigate to settings
-                  window.location.href = "/settings";
-                }}
-                aria-label="Open settings"
+                onClick={() => navigate("/settings")}
               >
                 <Settings className="w-4 h-4" />
               </Button>
-            ) : (
-              <Tooltip content="Settings">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => (window.location.href = "/settings")}
-                >
-                  <Settings className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-            )}
+            </Tooltip>
           </div>
         </div>
       </aside>

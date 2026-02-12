@@ -1,6 +1,15 @@
+/** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: ["class", "class"],
-  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  darkMode: "class",
+
+  content: [
+    "./index.html",
+    "./src/**/*.{js,jsx}",
+
+    // ✅ REQUIRED FOR HERO UI
+    "./node_modules/@heroui/react/**/*.{js,jsx}",
+  ],
+
   theme: {
     extend: {
       borderRadius: {
@@ -61,7 +70,7 @@ export default {
         },
       },
 
-      /* 🔥 ADD THESE FOR MAGIC UI */
+      /* Optional animations (keep if used elsewhere) */
       animation: {
         gradient: "gradient 6s ease infinite",
         spinSlow: "spin 12s linear infinite",
@@ -75,5 +84,6 @@ export default {
       },
     },
   },
+
   plugins: [require("tailwindcss-animate")],
 };

@@ -2,11 +2,13 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
 export default function RequireAuth() {
-  const { isAuthenticated } = useAuth();
+  const { token } = useAuth();
   const location = useLocation();
 
-  // 🔒 Not logged in → redirect to login
-  if (!isAuthenticated) {
+  console.log("[RequireAuth] token:", token);
+
+  if (!token) {
+    console.log("[RequireAuth] No token → redirecting to login");
     return (
       <Navigate
         to="/login"
@@ -16,6 +18,5 @@ export default function RequireAuth() {
     );
   }
 
-  // ✅ Logged in → render protected routes
   return <Outlet />;
 }

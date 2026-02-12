@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+// src/components/FilterBar/FilterBar.jsx
+import React, { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
-/* ---------- Quick Presets ---------- */
 const QUICK = [
   { label: "15m", min: 15 },
   { label: "1h", min: 60 },
@@ -10,7 +13,6 @@ const QUICK = [
 ];
 
 export default function FilterBar({ filters, setFilters }) {
-  /* ---------- Local UI State ---------- */
   const [local, setLocal] = useState({
     search: filters.search || "",
     resourceId: filters.resourceId || "",
@@ -21,9 +23,8 @@ export default function FilterBar({ filters, setFilters }) {
   });
 
   const [activeQuick, setActiveQuick] = useState(null);
-
-  // NEW: validation error state
   const [dateError, setDateError] = useState("");
+  const debounceRef = useRef(null);
 
   /* ---------- Helpers ---------- */
 
@@ -43,13 +44,13 @@ export default function FilterBar({ filters, setFilters }) {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
   }
 
-  /* ---------- Core Validation Logic ---------- */
   function validateDates(from, to) {
-    if (!from || !to) return true; // allow partial
-    const f = new Date(from);
-    const t = new Date(to);
-    if (f > t) {
-      setDateError("Error : From date should not be greater than To date");
+    if (!from || !to) {
+      setDateError("");
+      return true;
+    }
+    if (new Date(from) > new Date(to)) {
+      setDateError("From date must not be greater than To date");
       return false;
     }
     setDateError("");
@@ -57,95 +58,124 @@ export default function FilterBar({ filters, setFilters }) {
   }
 
   /* ---------- Quick Filters ---------- */
+
   function applyQuick(q) {
     setActiveQuick(q?.label || null);
 
     if (!q?.min) {
-      setLocal({ ...local, fromLocal: "", toLocal: "" });
+      setLocal((s) => ({ ...s, fromLocal: "", toLocal: "" }));
       return;
     }
 
     const now = new Date();
     const from = new Date(now.getTime() - q.min * 60000);
 
-    setLocal({
-      ...local,
+    setLocal((s) => ({
+      ...s,
       fromLocal: isoToInput(from.toISOString()),
       toLocal: isoToInput(now.toISOString()),
-    });
+    }));
   }
 
-  /* ---------- Main Effect (Apply Filters) ---------- */
+  /* ---------- Debounced Apply ---------- */
+
   useEffect(() => {
-    const isValid = validateDates(local.fromLocal, local.toLocal);
-    if (!isValid) return; // 🚫 BLOCK API
+    if (!validateDates(local.fromLocal, local.toLocal)) return;
 
-    const out = {
-      search: local.search || undefined,
-      resourceId: local.resourceId || undefined,
-      level: local.level || undefined,
-      from: local.fromLocal ? toLocalISO(local.fromLocal) : undefined,
-      to: local.toLocal ? toLocalISO(local.toLocal) : undefined,
-      caseSensitive: local.caseSensitive || false,
-    };
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setFilters({
+        search: local.search || undefined,
+        resourceId: local.resourceId || undefined,
+        level: local.level || undefined,
+        from: local.fromLocal ? toLocalISO(local.fromLocal) : undefined,
+        to: local.toLocal ? toLocalISO(local.toLocal) : undefined,
+        caseSensitive: local.caseSensitive || false,
+      });
+    }, 300);
 
-    setFilters(out);
+    return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [local]);
 
   /* ---------- UI ---------- */
-  return (
-    <div className="space-y-3">
 
-      {/* Quick Pills */}
+  return (
+    <div className="space-y-4">
+      {/* Quick pills */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-2 text-xs text-slate-500">Quick:</span>
+        <span className="text-sm text-slate-600">Quick:</span>
         {QUICK.map((q) => (
           <button
             key={q.label}
             onClick={() => applyQuick(q)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition
-              ${activeQuick === q.label
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+            className={`px-3 py-1 rounded-full text-sm border transition
+              ${
+                activeQuick === q.label
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white border-slate-300 hover:bg-slate-50"
+              }`}
           >
             {q.label}
           </button>
         ))}
       </div>
 
-      {/* Main Filters */}
-      <div className="grid items-end grid-cols-1 gap-3 p-3 bg-white border rounded-lg shadow-sm sm:grid-cols-2 lg:grid-cols-7 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+      {/* Filters */}
+      <div className="grid items-end grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <Input
+          placeholder="Search message..."
+          value={local.search}
+          onChange={(e) => setLocal({ ...local, search: e.target.value })}
+        />
 
-        <Input label="Search" value={local.search}
-          onChange={(v) => setLocal({ ...local, search: v })} />
+        <Input
+          placeholder="Resource ID"
+          value={local.resourceId}
+          onChange={(e) => setLocal({ ...local, resourceId: e.target.value })}
+        />
 
-        <Input label="Resource" value={local.resourceId}
-          onChange={(v) => setLocal({ ...local, resourceId: v })} />
+        <select
+          className="h-10 px-3 border rounded-md"
+          value={local.level}
+          onChange={(e) => setLocal({ ...local, level: e.target.value })}
+        >
+          <option value="">All levels</option>
+          <option value="error">Error</option>
+          <option value="warn">Warn</option>
+          <option value="info">Info</option>
+          <option value="debug">Debug</option>
+        </select>
 
-        <Select label="Level" value={local.level}
-          onChange={(v) => setLocal({ ...local, level: v })} />
+        <input
+          type="datetime-local"
+          className="h-10 px-3 border rounded-md"
+          value={local.fromLocal}
+          onChange={(e) => setLocal({ ...local, fromLocal: e.target.value })}
+        />
 
-        <DateInput label="From" value={local.fromLocal}
-          onChange={(v) => setLocal({ ...local, fromLocal: v })} />
+        <input
+          type="datetime-local"
+          className="h-10 px-3 border rounded-md"
+          value={local.toLocal}
+          onChange={(e) => setLocal({ ...local, toLocal: e.target.value })}
+        />
 
-        <DateInput label="To" value={local.toLocal}
-          onChange={(v) => setLocal({ ...local, toLocal: v })} />
-
-        <div className="flex items-center gap-2 pt-5">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2">
+          <Checkbox
             checked={local.caseSensitive}
-            onChange={(e) =>
-              setLocal({ ...local, caseSensitive: e.target.checked })
+            onCheckedChange={(v) =>
+              setLocal({ ...local, caseSensitive: !!v })
             }
           />
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            Case-sensitive
-          </span>
+          <span className="text-sm text-slate-600">Case-sensitive</span>
         </div>
+      </div>
 
-        <button
+      {/* Footer */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
           onClick={() =>
             setLocal({
               search: "",
@@ -156,66 +186,16 @@ export default function FilterBar({ filters, setFilters }) {
               caseSensitive: false,
             })
           }
-          className="h-10 text-white transition bg-indigo-600 rounded-lg hover:bg-indigo-700"
         >
-          Clear
-        </button>
+          Clear filters
+        </Button>
+
+        {dateError && (
+          <div className="px-3 py-1 text-sm text-red-600 rounded bg-red-50">
+            ⚠️ {dateError}
+          </div>
+        )}
       </div>
-
-      {/* Error Message */}
-      {dateError && (
-        <div className="px-3 py-2 text-sm text-red-600 bg-red-100 border border-red-300 rounded-lg">
-          ⚠️ {dateError}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ---------- small UI components ---------- */
-
-function Input({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="block mb-1 text-xs text-slate-500">{label}</label>
-      <input
-        className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-800 dark:text-white"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
-  );
-}
-
-function Select({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="block mb-1 text-xs text-slate-500">{label}</label>
-      <select
-        className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-800 dark:text-white"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">All</option>
-        <option value="error">Error</option>
-        <option value="warn">Warn</option>
-        <option value="info">Info</option>
-        <option value="debug">Debug</option>
-      </select>
-    </div>
-  );
-}
-
-function DateInput({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="block mb-1 text-xs text-slate-500">{label}</label>
-      <input
-        type="datetime-local"
-        className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-800 dark:text-white"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
     </div>
   );
 }

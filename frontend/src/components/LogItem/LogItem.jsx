@@ -1,76 +1,114 @@
+// src/components/LogItem/LogItem.jsx
+import React, { useState, useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, Star, Share2 } from "lucide-react";
+
+/**
+ * Minimal but expressive log row.
+ * Shows timestamp, level badge, resource, short message, and quick actions.
+ *
+ * click on the row to open modal (detailed view).
+ */
+
 export default function LogItem({ log, onClick }) {
-  const levelColors = {
-    error: "border-l-4 border-red-500 bg-red-50/10",
-    warn: "border-l-4 border-yellow-500 bg-yellow-50/10",
-    info: "border-l-4 border-blue-500 bg-blue-50/10",
-    debug: "border-l-4 border-gray-500 bg-gray-50/10",
+  const [bookmarked, setBookmarked] = useState(false);
+
+  const shortMsg = useMemo(() => {
+    const s = String(log.message || "");
+    return s.length > 120 ? s.slice(0, 117) + "…" : s;
+  }, [log.message]);
+
+  const handleCopy = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // optionally show a tiny toast if you have one
+    } catch {}
   };
 
-  const levelStyles = {
-    error: {
-      badge: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    },
-    warn: {
-      badge:
-        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-    },
-    info: {
-      badge:
-        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    },
-    debug: {
-      badge:
-        "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
-    },
-  };
-
-  const colorClass = levelColors[log.level] || levelColors.debug;
-  const badgeClass = (levelStyles[log.level] || levelStyles.debug).badge;
-
-  function formatIST(utc) {
-    const d = new Date(utc);
-    return d.toLocaleString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    });
-  }
+  const levelColor = {
+    error: "bg-red-100 text-red-700",
+    warn: "bg-amber-100 text-amber-700",
+    info: "bg-sky-100 text-sky-700",
+    debug: "bg-slate-100 text-slate-700",
+  }[(log.level || "info").toLowerCase()];
 
   return (
     <div
-      onClick={() => onClick?.(log)}
-      className={`flex gap-3 p-4 rounded-md overflow-hidden transition cursor-pointer
-      hover:shadow-md hover:scale-[1.01] hover:bg-slate-100 dark:hover:bg-slate-800
-      ${colorClass}`}
+      role="button"
+      onClick={() => onClick && onClick(log)}
+      className="group cursor-pointer p-3 border rounded-lg hover:shadow active:translate-y-[1px] transition"
     >
-      <div className="flex-1">
-        {/* Top row */}
-        <div className="flex items-center justify-between">
-          <span
-            className={`text-xs px-2 py-0.5 rounded font-semibold ${badgeClass}`}
-          >
-            {log.level.toUpperCase()}
-          </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+            <div className={`px-2 py-1 rounded-md text-xs font-semibold ${levelColor}`}>
+              {(log.level || "INFO").toUpperCase()}
+            </div>
+            <div className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()}</div>
+            <div className="ml-2 text-xs text-slate-400">·</div>
+            <div className="ml-2 text-xs text-slate-600">{log.resourceId || "—"}</div>
+          </div>
 
-          <time className="text-xs text-slate-500 dark:text-slate-400">
-            {formatIST(log.timestamp)} IST
-          </time>
+          <div className="mt-2 text-sm text-slate-700">{shortMsg}</div>
+
+          {/* optional mini-meta */}
+          {log.meta && Object.keys(log.meta).length > 0 && (
+            <div className="mt-2 text-xs text-slate-500">
+              {Object.entries(log.meta)
+                .slice(0, 3)
+                .map(([k, v]) => `${k}: ${String(v)}`)
+                .join(" • ")}
+            </div>
+          )}
         </div>
 
-        {/* Message */}
-        <p className="mt-1 text-sm text-slate-900 dark:text-slate-100">
-          {log.message}
-        </p>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setBookmarked((s) => !s);
+              }}
+              title={bookmarked ? "Unbookmark" : "Bookmark"}
+              className="p-1 rounded hover:bg-slate-100"
+            >
+              <Star className={`h-4 w-4 ${bookmarked ? "text-yellow-500" : "text-slate-400"}`} />
+            </button>
 
-        {/* Meta */}
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          {log.resourceId} · {log.traceId} · {log.spanId} · {log.commit}
-        </p>
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopy(log.message || "");
+                }}
+                title="Copy message"
+                className="p-1 rounded hover:bg-slate-100"
+              >
+                <Copy className="w-4 h-4 text-slate-400" />
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // quick share: open navigator.share if available
+                  if (navigator.share) {
+                    navigator.share({
+                      title: `Log ${log.level}`,
+                      text: `${new Date(log.timestamp).toLocaleString()} — ${log.message}`,
+                    });
+                  } else {
+                    // fallback: copy to clipboard
+                    navigator.clipboard.writeText(`${new Date(log.timestamp).toLocaleString()} — ${log.message}`);
+                  }
+                }}
+                title="Share"
+                className="p-1 rounded hover:bg-slate-100"
+              >
+                <Share2 className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

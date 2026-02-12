@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,9 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/* =====================================================
-   ENUMS
-===================================================== */
+/**
+ * =====================================================
+ * ENUMS
+ * =====================================================
+ */
 
 enum Role {
   MASTER_ADMIN
@@ -26,98 +26,313 @@ enum InquiryType {
   OTHER
 }
 
-/* =====================================================
-   USER & AUTH
-===================================================== */
-
-model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  username      String   @unique
-  password      String?
-  role          Role     @default(USER)
-  provider      String   @default("credentials")
-  emailVerified Boolean  @default(false)
-  createdAt     DateTime @default(now())
-
-  contactRequests ContactRequest[]
+enum Environment {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
 }
 
+enum AppMemberRole {
+  OWNER
+  ADMIN
+  VIEWER
+}
 
+enum AuthEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  MFA_REQUIRED
+  MFA_SUCCESS
+  MFA_FAILED
+  ACCOUNT_LOCKED
+  MFA_SETUP_STARTED
+  MFA_SETUP_COMPLETED
+  MFA_DISABLED
+  RECOVERY_CODE_USED
+  RECOVERY_CODES_REGENERATED
+  PASSWORD_RESET
+  LOGOUT
+}
 
-/* =====================================================
-   CONTACT SALES
-===================================================== */
+/**
+ * =====================================================
+ * USER
+ * =====================================================
+ */
 
-model ContactRequest {
-  id          String   @id @default(uuid())
+model User {
+  id            String  @id @default(uuid())
+  email         String  @unique
+  username      String  @unique
+  password      String?
+  role          Role    @default(USER)
+  provider      String  @default("credentials")
+  emailVerified Boolean @default(false)
 
-  // Optional external reference (CRM, email thread, etc.)
-  ref         String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  fullName    String
-  email       String
+  /**
+   * ==========================
+   * MFA (Enterprise Grade)
+   * ==========================
+   */
 
-  // Phone components
-  phoneDialCode String?   // "+91"
-  phoneLocal    String?   // "9876543210"
-  phoneFull     String?   // "+91 9876543210"
+  mfaEnabled Boolean @default(false)
 
-  company     String
-  employees   String?
-  inquiry     InquiryType
+  /// AES encrypted Base32 TOTP secret
+  mfaSecretEncrypted String?
 
+  /// Failed attempts before lock
+  mfaFailedAttempts Int @default(0)
+
+  /// Account locked until this timestamp
+  mfaLockedUntil DateTime?
+
+  /**
+   * ==========================
+   * Relations
+   * ==========================
+   */
+
+  profile         UserProfile?
+  contactRequests ContactRequest[]
+  applications    Application[]
+  memberships     AppMember[]
+  authLogs        AuthAuditLog[]
+  refreshTokens   RefreshToken[]
+  recoveryCodes   MfaRecoveryCode[]
+  trustedDevices  TrustedDevice[]
+
+  @@index([role])
+  @@index([email])
+  @@index([mfaLockedUntil])
+}
+
+/**
+ * =====================================================
+ * MFA RECOVERY CODES (One-time use)
+ * =====================================================
+ */
+
+model MfaRecoveryCode {
+  id String @id @default(uuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Store HASH ONLY (bcrypt)
+  codeHash String
+
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([used])
+}
+
+/**
+ * =====================================================
+ * TRUSTED DEVICES
+ * =====================================================
+ */
+
+model TrustedDevice {
+  id String @id @default(uuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// SHA256(IP + UA)
+  deviceHash String
+
+  deviceName String?
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+  @@index([deviceHash])
+  @@index([expiresAt])
+
+  /// Prevent duplicate trust for same user/device
+  @@unique([userId, deviceHash])
+}
+
+/**
+ * =====================================================
+ * USER PROFILE
+ * =====================================================
+ */
+
+model UserProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName   String?
+  lastName    String?
   country     String?
+  countryCode String?
   state       String?
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =====================================================
+ * APPLICATION
+ * =====================================================
+ */
+
+model Application {
+  id          String      @id @default(uuid())
+  name        String
+  environment Environment @default(DEVELOPMENT)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  members AppMember[]
+  apiKeys ApiKey[]
+  logs    Log[]
+
+  deleted   Boolean   @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([deleted])
+  @@index([userId, deleted])
+}
+
+/**
+ * =====================================================
+ * APP MEMBER
+ * =====================================================
+ */
+
+model AppMember {
+  id            String        @id @default(uuid())
+  userId        String
+  applicationId String
+  role          AppMemberRole @default(VIEWER)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, applicationId])
+  @@index([applicationId])
+}
+
+/**
+ * =====================================================
+ * API KEYS
+ * =====================================================
+ */
+
+model ApiKey {
+  id            String      @id @default(uuid())
+  name          String?
+  keyHash       String      @unique
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  revoked   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  rotatedAt DateTime?
+
+  @@index([applicationId])
+  @@index([revoked])
+}
+
+/**
+ * =====================================================
+ * LOGS
+ * =====================================================
+ */
+
+model Log {
+  id String @id @default(uuid())
+
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  level      String
+  message    String
+  resourceId String?
+  timestamp  DateTime
+
+  traceId String?
+  spanId  String?
+  commit  String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([applicationId])
+  @@index([applicationId, timestamp])
+  @@index([applicationId, level])
+  @@index([timestamp])
+  @@index([traceId])
+  @@index([spanId])
+  @@index([commit])
+}
+
+/**
+ * =====================================================
+ * CONTACT REQUEST
+ * =====================================================
+ */
+
+model ContactRequest {
+  id String @id @default(uuid())
+
+  ref      String? @unique
+  fullName String
+  email    String
+
+  phoneDialCode String?
+  phoneLocal    String?
+  phoneFull     String?
+
+  company   String
+  employees String?
+  inquiry   InquiryType
+
+  country String?
+  state   String?
+
   message     String?
-  marketingOk Boolean     @default(false)
+  marketingOk Boolean @default(false)
 
-  source      String      @default("contact-sales-page")
-  createdAt   DateTime    @default(now())
+  source    String   @default("contact-sales-page")
+  createdAt DateTime @default(now())
 
-  // Optional link to authenticated user
-  userId      String?
-  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([company])
   @@index([createdAt])
 }
 
-/* =====================================================
-   LOGS (NDJSON → DATABASE ALIGNED)
-===================================================== */
+/**
+ * =====================================================
+ * EMAIL OTP
+ * =====================================================
+ */
 
-model Log {
-  id String @id @default(uuid())
-
-  // Core NDJSON fields
-  level      String
-  message    String
-  resourceId String
-
-  // Original log timestamp (event time)
-  timestamp  DateTime
-
-  traceId    String
-  spanId     String
-  commit     String
-
-  // Arbitrary structured metadata
-  metadata   Json
-
-  // Ingestion time
-  createdAt DateTime @default(now())
-
-  // Indexes for fast filtering & querying
-  @@index([level])
-  @@index([resourceId])
-  @@index([timestamp])
-  @@index([traceId])
-  @@index([spanId])
-  @@index([commit])
-}
 model EmailOtp {
   id        String   @id @default(uuid())
   email     String
@@ -129,19 +344,48 @@ model EmailOtp {
   @@index([email])
   @@index([email, code])
 }
-/* =====================================================
-   AUTH AUDIT LOGS
-===================================================== */
+
+/**
+ * =====================================================
+ * AUTH AUDIT LOG
+ * =====================================================
+ */
 
 model AuthAuditLog {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
+
+  userId String?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   email     String
-  event     String   // LOGIN_SUCCESS, LOGIN_FAILED, OTP_SENT, OTP_VERIFIED, PASSWORD_RESET, SIGNUP
+  event     AuthEventType
   ip        String?
   userAgent String?
+
   createdAt DateTime @default(now())
 
   @@index([email])
   @@index([event])
   @@index([createdAt])
+}
+
+/**
+ * =====================================================
+ * REFRESH TOKEN
+ * =====================================================
+ */
+
+model RefreshToken {
+  id        String @id @default(uuid())
+  tokenHash String @unique
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+  @@index([expiresAt])
 }

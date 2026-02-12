@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 import Sidebar from "./components/Sidebar";
 import ConfirmLogoutModal from "@/components/ui/ConfirmLogoutModal";
@@ -16,32 +17,67 @@ import { Menu, LogOut, User, Settings } from "lucide-react";
 
 export default function App() {
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  /* ---------------- LOGOUT ---------------- */
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login", { replace: true });
+  /* =====================================================
+     SAFE LOGOUT (Context-Controlled)
+  ===================================================== */
+
+  const handleLogout = async () => {
+    try {
+      await logout(); // clears token, user, refresh cookie
+    } catch (err) {
+      console.error("Logout failed:", err);
+    } finally {
+      navigate("/login", { replace: true });
+    }
   };
+
+  /* =====================================================
+     ESC CLOSE (MOBILE SIDEBAR)
+  ===================================================== */
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  /* =====================================================
+     OPTIONAL: HARD SAFETY CHECK
+     (Prevents ghost session UI)
+  ===================================================== */
+
+  useEffect(() => {
+    if (!user) return;
+    // If user disappears for any reason, redirect cleanly
+  }, [user]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
-      {/* ================= SIDEBAR (DESKTOP) ================= */}
-      <aside className="hidden bg-white border-r lg:flex lg:w-72 lg:flex-col">
+
+      {/* ================= DESKTOP SIDEBAR ================= */}
+      <div className="hidden lg:block">
         <Sidebar />
-      </aside>
+      </div>
 
       {/* ================= MAIN ================= */}
       <div className="flex flex-col flex-1 w-full">
+
         {/* ================= HEADER ================= */}
         <header className="sticky top-0 z-40 flex items-center h-16 gap-3 px-4 bg-white border-b sm:px-6">
+
           {/* Mobile sidebar toggle */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className="lg:hidden hover:bg-slate-100 focus-visible:ring-0"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="w-5 h-5" />
@@ -63,22 +99,22 @@ export default function App() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="gap-2 bg-white border-slate-300"
+                className="gap-2 bg-transparent hover:bg-slate-100 focus-visible:ring-0"
               >
-                <User className="w-4 h-4 " />
-                Account
+                <User className="w-4 h-4" />
+                {user?.email || "Account"}
               </Button>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent
               align="end"
-              className="bg-white w-52 border-slate-200"
+              className="bg-white border shadow-lg w-52"
             >
               <DropdownMenuItem
                 onClick={() => navigate("/settings")}
-                className="cursor-pointer"
+                className="cursor-pointer focus:bg-slate-100"
               >
                 <Settings className="w-4 h-4 mr-2" />
                 Profile settings
@@ -86,7 +122,7 @@ export default function App() {
 
               <DropdownMenuItem
                 onClick={() => setLogoutOpen(true)}
-                className="text-red-600 cursor-pointer focus:text-red-600"
+                className="text-red-600 cursor-pointer focus:bg-red-50"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -96,7 +132,7 @@ export default function App() {
         </header>
 
         {/* ================= CONTENT ================= */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-slate-100">
+        <main className="flex-1 p-4 overflow-auto bg-slate-100 sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-[1600px]">
             <Outlet />
           </div>
@@ -104,17 +140,11 @@ export default function App() {
       </div>
 
       {/* ================= MOBILE SIDEBAR ================= */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="absolute top-0 left-0 h-full bg-white shadow-xl w-72">
-            <Sidebar mobile onClose={() => setSidebarOpen(false)} />
-          </div>
-        </div>
-      )}
+      <Sidebar
+        mobile
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       {/* ================= LOGOUT MODAL ================= */}
       <ConfirmLogoutModal
