@@ -1,134 +1,306 @@
+// src/hooks/useLogs.js
+
 import { useEffect, useState, useRef, useMemo } from "react";
 import { fetchLogs } from "../api/logsApi";
 import { getSocket } from "../services/socket";
 
+
 /* =====================================================
-   Defensive Validation
+VALIDATE FILTERS
 ===================================================== */
 
 function validateFilters(filters = {}) {
+
   if (filters.from && filters.to) {
+
     const from = new Date(filters.from).getTime();
     const to = new Date(filters.to).getTime();
 
-    if (!Number.isNaN(from) && !Number.isNaN(to) && from > to) {
+    if (!isNaN(from) && !isNaN(to) && from > to) {
+
       return {
         valid: false,
         error: "From date should not be greater than To date",
       };
+
     }
+
   }
 
   return { valid: true, error: null };
+
 }
 
+
+
 /* =====================================================
-   Main Hook
+HOOK
 ===================================================== */
 
 export function useLogs(filters = {}, options = {}) {
+
   const { page = 1, limit = 50 } = options;
 
+
   const [logs, setLogs] = useState([]);
+
   const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState(null);
 
+
   const prevIds = useRef(new Set());
+
   const abortRef = useRef(null);
 
-  /* -------------------------------------------------
-     STABLE DEPENDENCIES (CRITICAL FIX)
-  ------------------------------------------------- */
 
-  // prevents {} !== {} problem
+  const applicationId = filters?.applicationId || null;
+
+
   const filtersKey = useMemo(
     () => JSON.stringify(filters || {}),
     [filters]
   );
 
-  const applicationId = filters?.applicationId || null;
 
-  /* -------------------------------------------------
-     REST FETCH (server-side filtering + pagination)
-  ------------------------------------------------- */
+
+  /* =====================================================
+  FETCH LOGS — FINAL FIX
+  ===================================================== */
 
   useEffect(() => {
-    // cancel previous request if exists
-    if (abortRef.current) {
+
+    if (!applicationId) return;
+
+
+    if (abortRef.current)
       abortRef.current.abort();
-    }
+
 
     const controller = new AbortController();
+
     abortRef.current = controller;
+
 
     const validation = validateFilters(filters);
 
     if (!validation.valid) {
+
       setError(validation.error);
+
       return;
+
     }
 
-    setError(null);
+
     setLoading(true);
 
-    fetchLogs({ ...filters, page, limit }, controller.signal)
+    setError(null);
+
+
+    fetchLogs(
+      { ...filters, page, limit },
+      controller.signal
+    )
+
       .then((response) => {
-        if (!response) return; // aborted
 
-        const data = response?.data || response || [];
+        /*
+        CORRECT BACKEND FORMAT:
 
-        prevIds.current = new Set(data.map((l) => l.id));
-        setLogs(data);
-      })
-      .catch((err) => {
-        if (err?.name !== "AbortError") {
-          setError("Failed to fetch logs from server");
+        {
+          page,
+          limit,
+          total,
+          totalPages,
+          data: logsArray
         }
+        */
+
+
+        if (!response || !Array.isArray(response.data)) {
+
+          console.error(
+            "Invalid logs response:",
+            response
+          );
+
+          setLogs([]);
+
+          return;
+
+        }
+
+
+        const logsArray = response.data;
+
+
+        console.log(
+          "✅ Logs fetched:",
+          logsArray.length
+        );
+
+
+        const normalized = logsArray.map((log) => ({
+
+          ...log,
+
+          meta: log.metadata || {},
+
+        }));
+
+
+        prevIds.current =
+          new Set(normalized.map(l => l.id));
+
+
+        setLogs(normalized);
+
       })
-      .finally(() => setLoading(false));
+
+
+      .catch((err) => {
+
+        if (err.name !== "AbortError") {
+
+          console.error(err);
+
+          setError(
+            err.message ||
+            "Failed to fetch logs"
+          );
+
+        }
+
+      })
+
+
+      .finally(() => {
+
+        setLoading(false);
+
+      });
+
 
     return () => controller.abort();
 
-  }, [filtersKey, page, limit]); // ⭐ FIXED dependency
+  }, [filtersKey, page, limit, applicationId]);
 
-  /* -------------------------------------------------
-     SOCKET STREAM (per-application room)
-  ------------------------------------------------- */
+
+
+
+  /* =====================================================
+  REALTIME SOCKET — FINAL
+  ===================================================== */
 
   useEffect(() => {
+
     if (!applicationId) return;
+
 
     const socket = getSocket();
 
-    socket.emit("join_application", applicationId);
 
-    const handler = (newLog) => {
-      if (!newLog || newLog.applicationId !== applicationId) return;
-      if (prevIds.current.has(newLog.id)) return;
+    socket.connect();
 
-      prevIds.current.add(newLog.id);
 
-      // prepend log efficiently
-      setLogs((prev) => [newLog, ...prev]);
+    const onConnect = () => {
+
+      console.log(
+        "📡 Joining room:",
+        applicationId
+      );
+
+      socket.emit(
+        "join_application",
+        applicationId
+      );
+
     };
 
-    socket.on("new_log", handler);
+
+    socket.on("connect", onConnect);
+
+
+
+    const onNewLog = (log) => {
+
+      console.log(
+        "🔥 LIVE LOG:",
+        log
+      );
+
+
+      if (!log) return;
+
+      if (log.applicationId !== applicationId)
+        return;
+
+      if (prevIds.current.has(log.id))
+        return;
+
+
+      const normalized = {
+
+        ...log,
+
+        meta: log.metadata || {},
+
+      };
+
+
+      prevIds.current.add(log.id);
+
+
+      setLogs(prev => [
+
+        normalized,
+
+        ...prev,
+
+      ]);
+
+    };
+
+
+    socket.on(
+      "new_log",
+      onNewLog
+    );
+
+
 
     return () => {
-      socket.off("new_log", handler);
+
+      socket.off(
+        "connect",
+        onConnect
+      );
+
+      socket.off(
+        "new_log",
+        onNewLog
+      );
+
     };
 
   }, [applicationId]);
 
-  /* -------------------------------------------------
-     Memoized Return
-  ------------------------------------------------- */
 
-  const visibleLogs = useMemo(() => logs, [logs]);
+
+
+  /* =====================================================
+  RETURN
+  ===================================================== */
 
   return {
-    logs: visibleLogs,
+
+    logs,
+
     loading,
+
     error,
+
   };
+
 }

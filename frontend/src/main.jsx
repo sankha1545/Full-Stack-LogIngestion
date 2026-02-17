@@ -1,9 +1,7 @@
 // src/main.jsx
-
-import { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
 
 import "./index.css";
 
@@ -25,7 +23,7 @@ import ForgotPassword from "./auth/forgot-password/ForgotPassword";
 import VerifyOtp from "./auth/forgot-password/VerifyOtp";
 import ResetPassword from "./auth/forgot-password/ResetPassword";
 
-import MFAChallenge from "./components/auth/MFAChallenge";
+import MFAChallenge from "@/components/auth/MFAChallenge";
 
 import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
@@ -38,71 +36,110 @@ import SecuritySettings from "@/components/settings/SecuritySettings";
 import AppearanceSettings from "@/components/settings/AppearanceSettings";
 import NotificationsSettings from "./components/settings/NotificationsSettings";
 
+/* Loader & interceptors */
+import { LoaderProvider, useLoader } from "@/components/Loader/LoaderContext";
+import api from "@/api/api";
+import { setupInterceptors } from "@/api/setupInterceptors";
+
+/* Global Toaster (single instance) */
+import { Toaster } from "react-hot-toast";
+
+/* Lazy route */
 const Docs = lazy(() =>
   import("@/components/landingpage/HowitWorks/docs/Docs")
 );
 
+/* InterceptorInitializer: a small component that wires axios interceptors.
+   It uses the useLoader hook (so it MUST be rendered inside LoaderProvider). */
+function InterceptorInitializer() {
+  const { setLoading } = useLoader();
+
+  useEffect(() => {
+    const cleanup = setupInterceptors(api, setLoading);
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, [setLoading]);
+
+  return null;
+}
+
+/* App render */
 createRoot(document.getElementById("root")).render(
   <HeroUIProvider>
     <AuthProvider>
-      <TooltipProvider delayDuration={150}>
-        <BrowserRouter>
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center h-screen text-slate-500">
-                <div className="text-sm animate-pulse">Loading…</div>
-              </div>
-            }
-          >
-            <Routes>
+      <LoaderProvider>
+        <TooltipProvider delayDuration={150}>
+          <BrowserRouter>
+            {/* Initialize axios interceptors once (inside LoaderProvider) */}
+            <InterceptorInitializer />
 
-              {/* PUBLIC */}
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/create-account" element={<CreateAccount />} />
-              <Route path="/contact" element={<ContactSales />} />
-              <Route path="/docs" element={<Docs />} />
-              <Route path="/oauth/callback" element={<OAuthCallback />} />
-              <Route path="/mfa-verify" element={<MFAChallenge />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/forgot-password/verify" element={<VerifyOtp />} />
-              <Route path="/forgot-password/reset" element={<ResetPassword />} />
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-screen text-slate-500">
+                  <div className="text-sm animate-pulse">Loading…</div>
+                </div>
+              }
+            >
+              <Routes>
+                {/* PUBLIC */}
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/create-account" element={<CreateAccount />} />
+                <Route path="/contact" element={<ContactSales />} />
+                <Route path="/docs" element={<Docs />} />
+                <Route path="/oauth/callback" element={<OAuthCallback />} />
+                <Route path="/mfa-verify" element={<MFAChallenge />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/forgot-password/verify" element={<VerifyOtp />} />
+                <Route path="/forgot-password/reset" element={<ResetPassword />} />
 
-              {/* PROTECTED */}
-              <Route element={<RequireAuth />}>
-                <Route element={<App />}>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/applications" element={<Applications />} />
-                  <Route path="/applications/:id" element={<AppDetail />} />
+                {/* PROTECTED */}
+                <Route element={<RequireAuth />}>
+                  <Route element={<App />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/applications" element={<Applications />} />
+                    <Route path="/applications/:id" element={<AppDetail />} />
 
-                  <Route path="/settings" element={<SettingsLayout />}>
-                    <Route index element={<ProfileSettings />} />
-                    <Route path="profile" element={<ProfileSettings />} />
-                    <Route path="security" element={<SecuritySettings />} />
-                    <Route path="appearance" element={<AppearanceSettings />} />
-                    <Route path="notifications" element={<NotificationsSettings />} />
+                    <Route path="/settings" element={<SettingsLayout />}>
+                      <Route index element={<ProfileSettings />} />
+                      <Route path="profile" element={<ProfileSettings />} />
+                      <Route path="security" element={<SecuritySettings />} />
+                      <Route path="appearance" element={<AppearanceSettings />} />
+                      <Route path="notifications" element={<NotificationsSettings />} />
+                    </Route>
                   </Route>
                 </Route>
-              </Route>
 
-              {/* FALLBACK */}
-              <Route
-                path="*"
-                element={
-                  <div className="flex items-center justify-center h-screen text-slate-500">
-                    Page not found
-                  </div>
-                }
-              />
+                {/* FALLBACK */}
+                <Route
+                  path="*"
+                  element={
+                    <div className="flex items-center justify-center h-screen text-slate-500">
+                      Page not found
+                    </div>
+                  }
+                />
+              </Routes>
+            </Suspense>
 
-            </Routes>
-          </Suspense>
-
-          <Toaster position="top-right" />
-        </BrowserRouter>
-      </TooltipProvider>
+            {/* GLOBAL TOASTER (single instance for the whole app) */}
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 3000,
+                style: {
+                  background: "#fff",
+                  color: "#0f172a",
+                  border: "1px solid #e2e8f0",
+                },
+              }}
+            />
+          </BrowserRouter>
+        </TooltipProvider>
+      </LoaderProvider>
     </AuthProvider>
   </HeroUIProvider>
 );

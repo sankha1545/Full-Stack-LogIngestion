@@ -15,59 +15,117 @@ import {
 
 import { Menu, LogOut, User, Settings } from "lucide-react";
 
-/* NEW — GLOBAL TOAST SYSTEM */
+/* GLOBAL TOAST */
 import { Toaster } from "react-hot-toast";
 
+/* ⭐ CRITICAL FIX — SOCKET */
+import { getSocket } from "@/services/socket";
+
 export default function App() {
+
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
+
   /* =====================================================
-     SAFE LOGOUT (Context-Controlled)
+     ⭐ SOCKET INITIALIZATION (CRITICAL FIX)
+  ===================================================== */
+
+  useEffect(() => {
+
+    if (!user) return;
+
+    console.log("🚀 Initializing global socket...");
+
+    const socket = getSocket();
+
+    socket.connect();
+
+    return () => {
+
+      socket.disconnect();
+
+    };
+
+  }, [user]);
+
+
+  /* =====================================================
+     SAFE LOGOUT
   ===================================================== */
 
   const handleLogout = async () => {
+
     try {
-      await logout(); // clears token, user, refresh cookie
-    } catch (err) {
-      console.error("Logout failed:", err);
-    } finally {
-      navigate("/login", { replace: true });
+
+      const socket = getSocket();
+
+      socket.disconnect();
+
+      await logout();
+
     }
+
+    catch (err) {
+
+      console.error("Logout failed:", err);
+
+    }
+
+    finally {
+
+      navigate("/login", { replace: true });
+
+    }
+
   };
 
+
   /* =====================================================
-     ESC CLOSE (MOBILE SIDEBAR)
+     ESC CLOSE SIDEBAR
   ===================================================== */
 
   useEffect(() => {
+
     const onKeyDown = (e) => {
-      if (e.key === "Escape") setSidebarOpen(false);
+
+      if (e.key === "Escape") {
+
+        setSidebarOpen(false);
+
+      }
+
     };
 
     document.addEventListener("keydown", onKeyDown);
+
     return () => document.removeEventListener("keydown", onKeyDown);
+
   }, []);
 
+
   /* =====================================================
-     HARD SAFETY CHECK
-     Prevents ghost session UI if token expires
-     (important after password change / forced logout)
+     SESSION SAFETY
   ===================================================== */
 
   useEffect(() => {
+
     if (user === null) {
-      // user explicitly removed → redirect to login
+
       navigate("/login", { replace: true });
+
     }
+
   }, [user, navigate]);
 
+
   return (
+
     <>
-      {/* ================= GLOBAL TOASTS ================= */}
+
       <Toaster
         position="top-right"
         toastOptions={{
@@ -80,99 +138,148 @@ export default function App() {
         }}
       />
 
+
       <div className="flex min-h-screen bg-slate-50 text-slate-900">
 
-        {/* ================= DESKTOP SIDEBAR ================= */}
+
+        {/* Desktop Sidebar */}
+
         <div className="hidden lg:block">
+
           <Sidebar />
+
         </div>
 
-        {/* ================= MAIN ================= */}
+
+        {/* Main */}
+
         <div className="flex flex-col flex-1 w-full">
 
-          {/* ================= HEADER ================= */}
+
+          {/* Header */}
+
           <header className="sticky top-0 z-40 flex items-center h-16 gap-3 px-4 bg-white border-b sm:px-6">
 
-            {/* Mobile sidebar toggle */}
+
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden hover:bg-slate-100 focus-visible:ring-0"
+              className="lg:hidden hover:bg-slate-100"
               onClick={() => setSidebarOpen(true)}
             >
+
               <Menu className="w-5 h-5" />
+
             </Button>
 
-            {/* Brand */}
-            <div className="flex flex-col leading-tight">
-              <span className="text-base font-semibold tracking-tight">
+
+            <div className="flex flex-col">
+
+              <span className="text-base font-semibold">
+
                 LogScope
+
               </span>
+
               <span className="text-xs text-slate-500">
+
                 Real-time log ingestion & querying
+
               </span>
+
             </div>
+
 
             <div className="flex-1" />
 
-            {/* ================= ACCOUNT DROPDOWN ================= */}
+
+            {/* Account */}
+
             <DropdownMenu>
+
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 bg-transparent hover:bg-slate-100 focus-visible:ring-0"
-                >
+
+                <Button variant="ghost" size="sm">
+
                   <User className="w-4 h-4" />
+
                   {user?.email || "Account"}
+
                 </Button>
+
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent
-                align="end"
-                className="bg-white border shadow-lg w-52"
-              >
+
+              <DropdownMenuContent align="end">
+
+
                 <DropdownMenuItem
                   onClick={() => navigate("/settings")}
-                  className="cursor-pointer focus:bg-slate-100"
                 >
+
                   <Settings className="w-4 h-4 mr-2" />
+
                   Profile settings
+
                 </DropdownMenuItem>
+
 
                 <DropdownMenuItem
                   onClick={() => setLogoutOpen(true)}
-                  className="text-red-600 cursor-pointer focus:bg-red-50"
+                  className="text-red-600"
                 >
+
                   <LogOut className="w-4 h-4 mr-2" />
+
                   Logout
+
                 </DropdownMenuItem>
+
+
               </DropdownMenuContent>
+
+
             </DropdownMenu>
+
+
           </header>
 
-          {/* ================= CONTENT ================= */}
-          <main className="flex-1 p-4 overflow-auto bg-slate-100 sm:p-6 lg:p-8">
-            <div className="mx-auto w-full max-w-[1600px]">
-              <Outlet />
-            </div>
+
+          {/* Content */}
+
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+
+            <Outlet />
+
           </main>
+
+
         </div>
 
-        {/* ================= MOBILE SIDEBAR ================= */}
+
+        {/* Mobile Sidebar */}
+
         <Sidebar
           mobile
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />
 
-        {/* ================= LOGOUT MODAL ================= */}
+
+        {/* Logout Modal */}
+
         <ConfirmLogoutModal
           open={logoutOpen}
           onOpenChange={setLogoutOpen}
           onConfirm={handleLogout}
         />
+
+
       </div>
+
+
     </>
+
   );
+
 }

@@ -1,64 +1,211 @@
-const BASE_URL = "/api";
+const BASE_URL = "http://localhost:3001/api";
 
-/* ---------- Value Normalizer ---------- */
-function normalizeValue(key, value) {
-  if (value === undefined || value === null) return null;
-  if (key === "from" || key === "to") return value;
-  return String(value);
+
+/* =====================================================
+   TOKEN HELPER
+===================================================== */
+
+function getAuthToken() {
+
+  return (
+
+    localStorage.getItem("token") ||
+
+    localStorage.getItem("access_token") ||
+
+    sessionStorage.getItem("token")
+
+  );
+
 }
 
-/* ---------- Error Normalizer ---------- */
-async function handleResponse(res) {
-  if (res.ok) return res.json();
 
-  let message = "Failed to fetch logs";
+/* =====================================================
+   VALUE NORMALIZER
+===================================================== */
+
+function normalizeValue(key, value) {
+
+  if (value === undefined || value === null) return null;
+
+  if (key === "from" || key === "to") return value;
+
+  return String(value);
+
+}
+
+
+/* =====================================================
+   ERROR HANDLER
+===================================================== */
+
+async function handleResponse(res) {
+
+  let data = null;
 
   try {
-    const data = await res.json();
-    if (data?.error) message = data.error;
-    else if (data?.message) message = data.message;
-  } catch {
-    message = res.statusText || message;
+
+    data = await res.json();
+
+  } catch {}
+
+  if (res.ok) {
+
+    return data;
+
   }
 
+  const message =
+
+    data?.error ||
+
+    data?.message ||
+
+    res.statusText ||
+
+    "Failed to fetch logs";
+
+
   const error = new Error(message);
+
   error.status = res.status;
+
   throw error;
+
 }
 
-/* ---------- Main API ---------- */
-export async function fetchLogs(filters = {}, signal) {
+
+/* =====================================================
+   BUILD QUERY
+===================================================== */
+
+function buildQueryParams(filters = {}) {
+
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
-    const norm = normalizeValue(key, value);
 
-    if (norm !== null && norm !== undefined && norm !== "") {
+    const normalized = normalizeValue(key, value);
+
+    if (
+
+      normalized !== null &&
+
+      normalized !== undefined &&
+
+      normalized !== ""
+
+    ) {
+
       if (key === "caseSensitive") {
-        params.append("caseSensitive", value ? "true" : "false");
-      } else {
-        params.append(key, norm);
+
+        params.append(
+
+          "caseSensitive",
+
+          value ? "true" : "false"
+
+        );
+
       }
+
+      else {
+
+        params.append(key, normalized);
+
+      }
+
     }
+
   });
 
-  const url = `${BASE_URL}/logs?${params.toString()}`;
+  return params.toString();
+
+}
+
+
+/* =====================================================
+   FETCH LOGS
+===================================================== */
+
+export async function fetchLogs(filters = {}, signal) {
+
+  const query = buildQueryParams(filters);
+
+  const url =
+
+    query.length
+
+      ? `${BASE_URL}/logs?${query}`
+
+      : `${BASE_URL}/logs`;
+
 
   if (import.meta.env.DEV) {
-    console.log("REQUEST URL:", url);
+
+    console.log("LogScope fetchLogs URL:", url);
+
   }
 
+
   try {
-    const res = await fetch(url, { signal });
-    return await handleResponse(res);
-  } catch (err) {
-    // silently ignore aborts (normal behavior)
+
+    const token = getAuthToken();
+
+
+    const res = await fetch(url, {
+
+      method: "GET",
+
+      signal,
+
+      credentials: "include",
+
+      headers: {
+
+        "Content-Type": "application/json",
+
+        ...(token && {
+
+          Authorization: `Bearer ${token}`
+
+        }),
+
+      },
+
+    });
+
+
+    const data = await handleResponse(res);
+
+
+    /*
+    CRITICAL FIX
+
+    Return FULL response
+
+    NOT data.data
+    */
+
+    return data;
+
+
+  }
+
+  catch (err) {
+
     if (err.name === "AbortError") return;
 
     if (!err.status) {
-      err.message = "Network error: Unable to reach server";
+
+      err.message =
+
+        "Network error: Unable to reach LogScope server";
+
     }
 
     throw err;
+
   }
+
 }
