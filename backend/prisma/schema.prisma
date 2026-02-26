@@ -7,11 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/**
- * =====================================================
- * ENUMS
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
 
 enum Role {
   MASTER_ADMIN
@@ -38,19 +36,22 @@ enum AppMemberRole {
   VIEWER
 }
 
-/**
- * ⭐ NEW — Professional log levels
- */
+//////////////////////////////////////////////////////
+// INDUSTRIAL LOG LEVELS
+//////////////////////////////////////////////////////
+
 enum LogLevel {
   DEBUG
   INFO
   WARN
   ERROR
+  FATAL
 }
 
-/**
- * UPDATED — added password events
- */
+//////////////////////////////////////////////////////
+// AUTH EVENTS
+//////////////////////////////////////////////////////
+
 enum AuthEventType {
   LOGIN_SUCCESS
   LOGIN_FAILED
@@ -70,55 +71,101 @@ enum AuthEventType {
   LOGOUT
 }
 
-/**
- * =====================================================
- * USER (SECURITY + SESSION MODEL)
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// USER
+//////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////
+// USER
+//////////////////////////////////////////////////////
 
 model User {
-  id            String  @id @default(uuid())
-  email         String  @unique
-  username      String  @unique
-  password      String?
-  role          Role    @default(USER)
-  provider      String  @default("credentials")
+
+  id String @id @default(uuid())
+
+  email String @unique
+
+  username String @unique
+
+  password String?
+
+  role Role @default(USER)
+
+  provider String @default("credentials")
+
   emailVerified Boolean @default(false)
 
   createdAt DateTime @default(now())
+
   updatedAt DateTime @updatedAt
 
-  tokenVersion      Int       @default(0)
+
+  //////////////////////////////////////////////////////
+  // SECURITY
+  //////////////////////////////////////////////////////
+
+  tokenVersion Int @default(0)
+
   passwordChangedAt DateTime?
 
   failedLoginAttempts Int @default(0)
-  accountLockedUntil  DateTime?
+
+  accountLockedUntil DateTime?
+
+
+  //////////////////////////////////////////////////////
+  // MFA
+  //////////////////////////////////////////////////////
 
   mfaEnabled Boolean @default(false)
-  mfaSecretEncrypted String?
-  mfaFailedAttempts  Int @default(0)
-  mfaLockedUntil     DateTime?
 
-  profile         UserProfile?
+  mfaSecretEncrypted String?
+
+  mfaFailedAttempts Int @default(0)
+
+  mfaLockedUntil DateTime?
+
+
+  //////////////////////////////////////////////////////
+  // RELATIONS  ✅ REQUIRED
+  //////////////////////////////////////////////////////
+
+  profile UserProfile?
+
   contactRequests ContactRequest[]
-  applications    Application[]
-  memberships     AppMember[]
-  authLogs        AuthAuditLog[]
-  refreshTokens   RefreshToken[]
-  recoveryCodes   MfaRecoveryCode[]
-  trustedDevices  TrustedDevice[]
+
+  applications Application[]
+
+  memberships AppMember[]
+
+  authLogs AuthAuditLog[]
+
+  refreshTokens RefreshToken[]
+
+  recoveryCodes MfaRecoveryCode[]
+
+  trustedDevices TrustedDevice[]
+
+  alertRules AlertRule[]
+
+
+  //////////////////////////////////////////////////////
+  // INDEXES
+  //////////////////////////////////////////////////////
+
+  @@index([email])
 
   @@index([role])
-  @@index([email])
-  @@index([mfaLockedUntil])
+
   @@index([accountLockedUntil])
+
+  @@index([mfaLockedUntil])
+
 }
 
-/**
- * =====================================================
- * MFA RECOVERY CODES
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// MFA RECOVERY CODES
+//////////////////////////////////////////////////////
 
 model MfaRecoveryCode {
   id String @id @default(uuid())
@@ -135,11 +182,9 @@ model MfaRecoveryCode {
   @@index([used])
 }
 
-/**
- * =====================================================
- * TRUSTED DEVICES
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// TRUSTED DEVICES
+//////////////////////////////////////////////////////
 
 model TrustedDevice {
   id String @id @default(uuid())
@@ -157,15 +202,12 @@ model TrustedDevice {
 
   @@unique([userId, deviceHash])
   @@index([userId])
-  @@index([deviceHash])
   @@index([expiresAt])
 }
 
-/**
- * =====================================================
- * USER PROFILE
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// USER PROFILE
+//////////////////////////////////////////////////////
 
 model UserProfile {
   id     String @id @default(uuid())
@@ -183,53 +225,59 @@ model UserProfile {
   updatedAt DateTime @updatedAt
 }
 
-/**
- * =====================================================
- * APPLICATION (CORE SAAS ENTITY)
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// APPLICATION (CORE SAAS ENTITY)
+//////////////////////////////////////////////////////
 
 model Application {
-  id          String      @id @default(uuid())
-  name        String
+
+  id String @id @default(uuid())
+
+  name String
+
   environment Environment @default(DEVELOPMENT)
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  /**
-   * ⭐ NEW — connection endpoint for SDK integration
-   * Example:
-   * https://api.logscope.com/ingest
-   */
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   connectionUrl String?
 
-  members AppMember[]
-  apiKeys ApiKey[]
-  logs    Log[]
+  retentionDays Int @default(30)
 
-  deleted   Boolean   @default(false)
+  members AppMember[]
+
+  apiKeys ApiKey[]
+
+  logs Log[]
+
+  metrics LogMetric[]
+
+  //////////////////////////////////////////////////////
+  // ✅ ADD THIS LINE
+  //////////////////////////////////////////////////////
+
+  alertRules AlertRule[]
+
+  deleted Boolean @default(false)
+
   deletedAt DateTime?
 
   createdAt DateTime @default(now())
+
   updatedAt DateTime @updatedAt
 
-  @@index([userId])
-  @@index([deleted])
-  @@index([userId, deleted])
 }
 
-/**
- * =====================================================
- * APP MEMBER
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// APP MEMBER
+//////////////////////////////////////////////////////
 
 model AppMember {
-  id            String        @id @default(uuid())
-  userId        String
+  id String @id @default(uuid())
+  userId String
   applicationId String
-  role          AppMemberRole @default(VIEWER)
+  role AppMemberRole @default(VIEWER)
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
@@ -240,15 +288,13 @@ model AppMember {
   @@index([applicationId])
 }
 
-/**
- * =====================================================
- * API KEYS (SECURE INGESTION)
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// API KEYS
+//////////////////////////////////////////////////////
 
 model ApiKey {
-  id            String      @id @default(uuid())
-  name          String?
+  id String @id @default(uuid())
+  name String?
 
   /**
    * Full hashed key stored securely
@@ -256,8 +302,7 @@ model ApiKey {
   keyHash String @unique
 
   /**
-   * ⭐ NEW — partial key for UI display
-   * Example: ls_8f3a...91ab
+   * partial key for UI display, example: ls_8f3a...91ab
    */
   keyPreview String?
 
@@ -272,46 +317,137 @@ model ApiKey {
   @@index([revoked])
 }
 
-/**
- * =====================================================
- * LOGS (OBSERVABILITY CORE)
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// LOGS (CORE OBSERVABILITY MODEL)
+//////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////
+// LOGS (CORE OBSERVABILITY MODEL)
+//////////////////////////////////////////////////////
 
 model Log {
+
+  id String @id @default(uuid())
+
+  //////////////////////////////////////////////////////
+  // TENANT
+  //////////////////////////////////////////////////////
+
+  applicationId String
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+
+  //////////////////////////////////////////////////////
+  // CORE
+  //////////////////////////////////////////////////////
+
+  level LogLevel
+
+  message String
+
+  timestamp DateTime
+
+
+  //////////////////////////////////////////////////////
+  // TRACEABILITY
+  //////////////////////////////////////////////////////
+
+  resourceId String?
+
+  traceId String?
+
+  spanId String?
+
+  commit String?
+
+
+  //////////////////////////////////////////////////////
+  // INDUSTRIAL FIELDS
+  //////////////////////////////////////////////////////
+
+  service String?
+
+  environment Environment @default(DEVELOPMENT)
+
+  host String?
+
+  version String?
+
+  tags String[] @default([])
+
+
+  //////////////////////////////////////////////////////
+  // FLEXIBLE METADATA
+  //////////////////////////////////////////////////////
+
+  metadata Json?
+
+
+  //////////////////////////////////////////////////////
+  // FULL TEXT SEARCH VECTOR
+  //////////////////////////////////////////////////////
+
+  searchVector Unsupported("tsvector")?
+
+
+  //////////////////////////////////////////////////////
+  // SYSTEM
+  //////////////////////////////////////////////////////
+
+  createdAt DateTime @default(now())
+
+
+  //////////////////////////////////////////////////////
+  // INDEXES
+  //////////////////////////////////////////////////////
+
+  @@index([applicationId])
+
+  @@index([applicationId, timestamp])
+
+  @@index([applicationId, level])
+
+  @@index([service])
+
+  @@index([environment])
+
+  @@index([host])
+
+  @@index([traceId])
+
+  @@index([spanId])
+
+}
+
+//////////////////////////////////////////////////////
+// ANALYTICS ENGINE
+//////////////////////////////////////////////////////
+
+model LogMetric {
   id String @id @default(uuid())
 
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
-  /**
-   * ⭐ UPDATED — standardized log level
-   */
-  level LogLevel
+  timestamp DateTime
 
-  message    String
-  resourceId String?
-  timestamp  DateTime
-
-  traceId String?
-  spanId  String?
-  commit  String?
-
-  metadata Json?
+  errorCount Int @default(0)
+  warnCount  Int @default(0)
+  infoCount  Int @default(0)
+  debugCount Int @default(0)
 
   createdAt DateTime @default(now())
 
   @@index([applicationId])
-  @@index([applicationId, timestamp])
-  @@index([applicationId, level])
   @@index([timestamp])
+  @@index([applicationId, timestamp])
+  @@unique([applicationId, timestamp])
 }
 
-/**
- * =====================================================
- * CONTACT REQUEST
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// CONTACT REQUEST
+//////////////////////////////////////////////////////
 
 model ContactRequest {
   id String @id @default(uuid())
@@ -343,28 +479,105 @@ model ContactRequest {
   @@index([email])
 }
 
-/**
- * =====================================================
- * EMAIL OTP
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// ALERT RULE
+//////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////
+// ALERT RULE
+//////////////////////////////////////////////////////
+
+model AlertRule {
+
+  id String @id @default(uuid())
+
+  name String
+
+  //////////////////////////////////////////////////////
+  // RELATION IDS
+  //////////////////////////////////////////////////////
+
+  applicationId String
+
+  userId String
+
+
+  //////////////////////////////////////////////////////
+  // CONDITIONS
+  //////////////////////////////////////////////////////
+
+  level LogLevel?
+
+  query String?
+
+  threshold Int
+
+  windowMinutes Int @default(5)
+
+
+  //////////////////////////////////////////////////////
+  // ACTIONS
+  //////////////////////////////////////////////////////
+
+  email String?
+
+  webhookUrl String?
+
+
+  //////////////////////////////////////////////////////
+  // STATUS
+  //////////////////////////////////////////////////////
+
+  enabled Boolean @default(true)
+
+  lastTriggered DateTime?
+
+
+  //////////////////////////////////////////////////////
+  // RELATIONS (FIXED — SAME LINE)
+  //////////////////////////////////////////////////////
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+
+  //////////////////////////////////////////////////////
+  // TIMESTAMP
+  //////////////////////////////////////////////////////
+
+  createdAt DateTime @default(now())
+
+
+  //////////////////////////////////////////////////////
+  // INDEXES
+  //////////////////////////////////////////////////////
+
+  @@index([applicationId])
+
+  @@index([userId])
+
+  @@index([enabled])
+
+}
+//////////////////////////////////////////////////////
+// EMAIL OTP
+//////////////////////////////////////////////////////
 
 model EmailOtp {
-  id        String   @id @default(uuid())
-  email     String
-  code      String
+  id String @id @default(uuid())
+  email String
+  code String
   expiresAt DateTime
-  verified  Boolean  @default(false)
+  verified Boolean @default(false)
   createdAt DateTime @default(now())
 
   @@index([email])
 }
 
-/**
- * =====================================================
- * AUTH AUDIT LOG
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// AUTH AUDIT LOG
+//////////////////////////////////////////////////////
 
 model AuthAuditLog {
   id String @id @default(uuid())
@@ -384,11 +597,9 @@ model AuthAuditLog {
   @@index([createdAt])
 }
 
-/**
- * =====================================================
- * REFRESH TOKEN
- * =====================================================
- */
+//////////////////////////////////////////////////////
+// REFRESH TOKEN
+//////////////////////////////////////////////////////
 
 model RefreshToken {
   id        String @id @default(uuid())

@@ -1,0 +1,8 @@
+{
+  "name": "logscope",
+  "version": "1.0.0",
+  "description": "LogScope official logging SDK",
+  "main": "index.js",
+  "types": "types.d.ts",
+  "license": "MIT"
+}

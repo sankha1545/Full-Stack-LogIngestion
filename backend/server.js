@@ -13,15 +13,27 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const passport = require("passport");
+const savedViewsRouter =
+require("./routes/savedViews");
+const analyticsJob =
+  require("./jobs/analytics.job");
 
-const { verify } = require("./utils/jwt");
-const prisma = require("./utils/prisma");
+const prisma =
+  require("./utils/prisma");
 
+const { verify } =
+  require("./utils/jwt");
+
+const searchRouter =
+require("./routes/search");
 /* ==================================================
    PASSPORT CONFIG
 ================================================== */
+const alertRouter =
+require("./routes/alerts");
 
 require("./auth/passport");
+
 
 /* ==================================================
    EXPRESS INIT
@@ -29,9 +41,11 @@ require("./auth/passport");
 
 const app = express();
 
-/* Disable etag to avoid caching issues */
 app.disable("etag");
-
+app.use(
+"/api/saved-views",
+savedViewsRouter
+);
 
 /* ==================================================
    SECURITY MIDDLEWARE
@@ -43,38 +57,62 @@ app.use(
   })
 );
 
+app.use(
+"/api/alerts",
+alertRouter
+);
+
 app.use(morgan("dev"));
 
-app.use(express.json({ limit: "1mb" }));
+app.use(
+  express.json({
+    limit: "1mb",
+  })
+);
 
 app.use(cookieParser());
 
 app.use(passport.initialize());
 
-
+app.use(
+"/api/search",
+searchRouter
+);
 /* ==================================================
    CORS CONFIG
 ================================================== */
 
 const allowedOrigins = [
+
   "http://localhost:3000",
+
   "http://localhost:5173",
+
   process.env.FRONTEND_URL,
+
 ].filter(Boolean);
+
 
 app.use(
   cors({
+
     origin(origin, callback) {
 
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin ||
+        allowedOrigins.includes(origin)) {
 
         return callback(null, true);
 
       }
 
-      console.warn("Blocked CORS:", origin);
+      console.warn(
+        "Blocked CORS:",
+        origin
+      );
 
-      return callback(new Error("Not allowed by CORS"));
+      return callback(
+        new Error("Not allowed by CORS")
+      );
 
     },
 
@@ -100,10 +138,12 @@ const apiLimiter = rateLimit({
 
 });
 
+
 app.use("/api", apiLimiter);
 
 
-/* Higher limit for log ingestion */
+
+/* Higher limit for ingestion */
 
 const ingestLimiter = rateLimit({
 
@@ -113,40 +153,73 @@ const ingestLimiter = rateLimit({
 
 });
 
-app.use("/api/logs/ingest", ingestLimiter);
 
+app.use(
+  "/api/logs/ingest",
+  ingestLimiter
+);
 
 
 /* ==================================================
    ROUTES
 ================================================== */
 
-const logsRouter = require("./routes/logs");
+const logsRouter =
+  require("./routes/logs");
 
-const contactRouter = require("./routes/contact");
+const logStatsRouter =
+  require("./routes/logStats");
 
-const geoRouter = require("./routes/geo");
+const contactRouter =
+  require("./routes/contact");
 
-const authRouter = require("./routes/auth");
+const geoRouter =
+  require("./routes/geo");
 
-const oauthRouter = require("./routes/oauth");
+const authRouter =
+  require("./routes/auth");
 
-const profileRouter = require("./routes/profile");
+const oauthRouter =
+  require("./routes/oauth");
 
-const appsRouter = require("./routes/apps");
+const profileRouter =
+  require("./routes/profile");
 
-const adminRouter = require("./routes/admin");
+const appsRouter =
+  require("./routes/apps");
 
+const adminRouter =
+  require("./routes/admin");
+
+
+/* Auth */
 
 app.use("/api/auth", authRouter);
 
 app.use("/api/auth", oauthRouter);
 
+
+/* Profile */
+
 app.use("/api/profile", profileRouter);
+
+
+/* Applications */
 
 app.use("/api/apps", appsRouter);
 
+
+/* Logs */
+
 app.use("/api/logs", logsRouter);
+
+
+/* ⭐ NEW — Stats Route */
+
+app.use("/api/logs", logStatsRouter);
+
+
+/* Other */
 
 app.use("/api/contact", contactRouter);
 
@@ -160,15 +233,24 @@ app.use("/api/admin", adminRouter);
    HEALTH CHECK
 ================================================== */
 
-app.get("/health", (_, res) => {
+app.get("/health", async (_, res) => {
+
+  const dbHealthy =
+    await prisma.healthCheck();
 
   res.status(200).json({
 
     status: "ok",
 
+    database:
+      dbHealthy
+        ? "connected"
+        : "disconnected",
+
     uptime: process.uptime(),
 
-    timestamp: new Date().toISOString(),
+    timestamp:
+      new Date().toISOString(),
 
   });
 
@@ -182,304 +264,275 @@ app.get("/health", (_, res) => {
 
 if (process.env.NODE_ENV !== "test") {
 
+  const server =
+    http.createServer(app);
 
-  const server = http.createServer(app);
 
+  const io =
+    new Server(server, {
 
-  const io = new Server(server, {
+      path: "/socket.io",
 
-    path: "/socket.io",
+      cors: {
 
-    cors: {
+        origin: allowedOrigins,
 
-      origin: allowedOrigins,
+        credentials: true,
 
-      credentials: true,
+      },
 
-    },
+      transports:
+        ["websocket", "polling"],
 
-    transports: ["websocket", "polling"],
-
-  });
-
+    });
+global.io = io;
 
   app.set("io", io);
 
 
 
   /* ==================================================
-     SOCKET AUTH FIXED VERSION
+     SOCKET AUTH
   ================================================== */
 
-  /* ==================================================
-   SOCKET AUTH — FINAL WORKING VERSION
-================================================== */
+  io.use(async (socket, next) => {
 
-io.use(async (socket, next) => {
+    try {
 
-  try {
-
-    let token = null;
+      let token = null;
 
 
-    /* =========================================
-       1. FRONTEND auth.token (MOST IMPORTANT)
-    ========================================= */
+      if (
+        socket.handshake.auth?.token
+      ) {
 
-    if (socket.handshake.auth?.token) {
-
-      token = socket.handshake.auth.token;
-
-      console.log("🔑 Token from auth");
-
-    }
-
-
-    /* =========================================
-       2. Authorization header fallback
-    ========================================= */
-
-    if (!token) {
-
-      const authHeader =
-        socket.handshake.headers.authorization;
-
-      if (authHeader?.startsWith("Bearer ")) {
-
-        token = authHeader.split(" ")[1];
-
-        console.log("🔑 Token from header");
+        token =
+          socket.handshake.auth.token;
 
       }
 
-    }
 
+      if (!token) {
 
-    /* =========================================
-       3. Cookie fallback
-    ========================================= */
+        const header =
+          socket.handshake.headers.authorization;
 
-    if (!token) {
-
-      const cookies =
-        socket.handshake.headers.cookie;
-
-      if (cookies) {
-
-        const tokenCookie =
-          cookies
-            .split(";")
-            .map(c => c.trim())
-            .find(c =>
-              c.startsWith("token=")
-            );
-
-        if (tokenCookie) {
+        if (
+          header?.startsWith("Bearer ")
+        ) {
 
           token =
-            tokenCookie.split("=")[1];
-
-          console.log("🔑 Token from cookie");
+            header.split(" ")[1];
 
         }
 
       }
 
-    }
 
+      if (!token) {
 
-    /* =========================================
-       FINAL VALIDATION
-    ========================================= */
+        const cookies =
+          socket.handshake.headers.cookie;
 
-    if (!token) {
+        if (cookies) {
 
-      console.log("❌ No socket token");
+          const found =
+            cookies
+              .split(";")
+              .map(c => c.trim())
+              .find(c =>
+                c.startsWith("token=")
+              );
 
-      return next(
-        new Error("Unauthorized")
-      );
+          if (found)
+            token =
+              found.split("=")[1];
 
-    }
-
-
-    const decoded = verify(token);
-
-
-    const user =
-      await prisma.user.findUnique({
-
-        where: {
-          id: decoded.sub
         }
 
-      });
+      }
 
 
-    if (!user) {
+      if (!token)
+        return next(
+          new Error("Unauthorized")
+        );
 
-      console.log("❌ User not found");
 
-      return next(
+      const decoded =
+        verify(token);
+
+
+      const user =
+        await prisma.user.findUnique({
+
+          where: {
+
+            id: decoded.sub,
+
+          },
+
+        });
+
+
+      if (!user)
+        return next(
+          new Error("Unauthorized")
+        );
+
+
+      socket.user = {
+
+        id: user.id,
+
+        email: user.email,
+
+        role: user.role,
+
+      };
+
+
+      next();
+
+    }
+
+    catch {
+
+      next(
         new Error("Unauthorized")
       );
 
     }
 
-
-    socket.user = {
-
-      id: user.id,
-
-      email: user.email,
-
-      role: user.role,
-
-    };
-
-
-    console.log(
-      "✅ Socket authenticated:",
-      user.email
-    );
-
-
-    next();
-
-  }
-
-  catch (err) {
-
-    console.error(
-      "❌ Socket auth error:",
-      err.message
-    );
-
-    next(
-      new Error("Unauthorized")
-    );
-
-  }
-
-});
-
+  });
 
 
 
   /* ==================================================
-     SOCKET CONNECTION HANDLER
+     SOCKET CONNECTION
   ================================================== */
 
-  io.on("connection", (socket) => {
+  io.on("connection", socket => {
+
+    console.log(
+      "Socket connected:",
+      socket.user.email
+    );
 
 
-    console.log("🔌 Socket connected:", socket.user.email);
+    socket.on(
+      "join_application",
+      async applicationId => {
+
+        try {
+
+          if (!applicationId)
+            return;
 
 
-
-    socket.on("join_application", async (applicationId) => {
-
-      try {
-
-        if (!applicationId) return;
+          let application;
 
 
+          if (
+            socket.user.role ===
+            "MASTER_ADMIN"
+          ) {
 
-        let application;
+            application =
+              await prisma.application.findFirst({
 
+                where: {
 
+                  id: applicationId,
 
-        if (socket.user.role === "MASTER_ADMIN") {
-
-          application = await prisma.application.findFirst({
-
-            where: {
-
-              id: applicationId,
-
-              deleted: false,
-
-            },
-
-          });
-
-        }
-
-        else {
-
-          application = await prisma.application.findFirst({
-
-            where: {
-
-              id: applicationId,
-
-              deleted: false,
-
-              OR: [
-
-                { userId: socket.user.id },
-
-                {
-
-                  members: {
-
-                    some: {
-
-                      userId: socket.user.id,
-
-                    },
-
-                  },
+                  deleted: false,
 
                 },
 
-              ],
+              });
 
-            },
+          }
 
-          });
+          else {
+
+            application =
+              await prisma.application.findFirst({
+
+                where: {
+
+                  id: applicationId,
+
+                  deleted: false,
+
+                  OR: [
+
+                    {
+                      userId:
+                        socket.user.id,
+                    },
+
+                    {
+
+                      members: {
+
+                        some: {
+
+                          userId:
+                            socket.user.id,
+
+                        },
+
+                      },
+
+                    },
+
+                  ],
+
+                },
+
+              });
+
+          }
+
+
+          if (!application)
+            return socket.emit(
+              "error",
+              "Access denied"
+            );
+
+
+          socket.join(
+            `app:${applicationId}`
+          );
+
 
         }
 
+        catch (err) {
 
-
-        if (!application) {
-
-          console.log("❌ Access denied to app:", applicationId);
-
-          return socket.emit("error", "Access denied");
+          console.error(
+            "Join error:",
+            err.message
+          );
 
         }
 
+      }
+    );
 
 
-        const room = `app:${applicationId}`;
+    socket.on(
+      "disconnect",
+      () => {
 
-
-        socket.join(room);
-
-
-        console.log("📡 Joined room:", room);
-
+        console.log(
+          "Socket disconnected:",
+          socket.user.email
+        );
 
       }
-
-      catch (err) {
-
-        console.error("Join error:", err.message);
-
-      }
-
-    });
-
-
-
-    socket.on("disconnect", () => {
-
-      console.log("❌ Socket disconnected:", socket.user.email);
-
-    });
-
+    );
 
   });
 
@@ -489,14 +542,33 @@ io.use(async (socket, next) => {
      START SERVER
   ================================================== */
 
-  const PORT = process.env.PORT || 3001;
+  const PORT =
+    process.env.PORT || 3001;
 
 
-  server.listen(PORT, "0.0.0.0", () => {
+  server.listen(
 
-    console.log(`🚀 Server running on port ${PORT}`);
+    PORT,
 
-  });
+    "0.0.0.0",
+
+    () => {
+
+      console.log(
+        `🚀 Server running on ${PORT}`
+      );
+
+
+      ///////////////////////////////////////////////////
+      // START ANALYTICS JOB
+      ///////////////////////////////////////////////////
+
+      analyticsJob.startAnalyticsJob();
+
+
+    }
+
+  );
 
 
 
@@ -504,14 +576,21 @@ io.use(async (socket, next) => {
      GRACEFUL SHUTDOWN
   ================================================== */
 
-  const shutdown = () => {
+  const shutdown = async () => {
 
-    console.log("🛑 Shutting down server...");
+    console.log(
+      "Shutting down..."
+    );
+
+
+    await prisma.$disconnect();
 
 
     server.close(() => {
 
-      console.log("✅ Server closed");
+      console.log(
+        "Server closed"
+      );
 
       process.exit(0);
 
@@ -520,12 +599,21 @@ io.use(async (socket, next) => {
   };
 
 
-  process.on("SIGINT", shutdown);
+  process.on(
+    "SIGINT",
+    shutdown
+  );
 
-  process.on("SIGTERM", shutdown);
+  process.on(
+    "SIGTERM",
+    shutdown
+  );
 
 }
 
 
+/* ==================================================
+   EXPORT
+================================================== */
 
 module.exports = app;
