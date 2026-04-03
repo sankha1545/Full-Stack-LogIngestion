@@ -1,88 +1,57 @@
-import { NavLink } from "react-router-dom";
-import { User, Shield, Moon ,Bell} from "lucide-react";
+﻿import { NavLink } from "react-router-dom";
+import { User, Shield, Moon, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  {
-    title: "Profile",
-    description: "Personal information",
-    icon: User,
-    path: "profile",
-  },
-  {
-    title: "Security",
-    description: "Password & MFA",
-    icon: Shield,
-    path: "security",
-  },
-  {
-    title: "Appearance",
-    description: "Theme preferences",
-    icon: Moon,
-    path: "appearance",
-  },
-  {
-  title: "Notifications",
-  description: "Alerts & integrations",
-  icon: Bell,
-  path: "notifications",
-},
-
+  { title: "Profile", description: "Personal details and account identity", icon: User, path: "profile" },
+  { title: "Security", description: "Password, MFA, and verification", icon: Shield, path: "security" },
+  { title: "Appearance", description: "Theme and interface preferences", icon: Moon, path: "appearance" },
+  { title: "Notifications", description: "Alerts and communication settings", icon: Bell, path: "notifications" },
 ];
 
 export default function SettingsSidebar() {
   return (
-    <div className="p-4 space-y-2 border shadow-sm rounded-2xl bg-card">
-
-      <div className="px-2 mb-4">
-        <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
-          Preferences
-        </h2>
+    <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl bg-slate-50 px-4 py-4">
+        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Preferences</div>
+        <div className="mt-2 text-sm leading-6 text-slate-600">Navigate settings with clearer group labels and stronger visual feedback.</div>
       </div>
 
-      {items.map((item) => {
-        const Icon = item.icon;
+      <div className="mt-4 space-y-2">
+        {items.map((item) => {
+          const Icon = item.icon;
 
-        return (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              cn(
-                "group relative flex items-start gap-3 rounded-xl px-4 py-3 transition-all",
-                isActive
-                  ? "bg-muted text-foreground"
-                  : "hover:bg-muted/50 text-muted-foreground"
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {/* Active rail indicator */}
-                <span
-                  className={cn(
-                    "absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r transition-all",
-                    isActive
-                      ? "bg-gradient-to-b from-indigo-500 to-pink-500"
-                      : "bg-transparent"
-                  )}
-                />
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                cn(
+                  "group relative flex items-start gap-3 rounded-2xl px-4 py-4 transition-all",
+                  isActive
+                    ? "bg-slate-950 text-white shadow-[0_18px_40px_rgba(15,23,42,0.15)]"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div className={cn("rounded-2xl p-2.5", isActive ? "bg-white/10 text-sky-200" : "bg-slate-100 text-slate-600") }>
+                    <Icon className="h-4 w-4" />
+                  </div>
 
-                <Icon className="w-5 h-5 mt-1 shrink-0" />
-
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">
-                    {item.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {item.description}
-                  </span>
-                </div>
-              </>
-            )}
-          </NavLink>
-        );
-      })}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold">{item.title}</div>
+                    <div className={cn("mt-1 text-xs leading-5", isActive ? "text-slate-300" : "text-slate-500")}>
+                      {item.description}
+                    </div>
+                  </div>
+                </>
+              )}
+            </NavLink>
+          );
+        })}
+      </div>
     </div>
   );
 }

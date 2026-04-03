@@ -1,306 +1,101 @@
-import React, { useState, useMemo } from "react";
-import { Copy, Star, Share2 } from "lucide-react";
-
+﻿import React, { useMemo, useState } from "react";
+import { Copy, Share2, Star } from "lucide-react";
+import { classifyLogKind, formatLogTimestamp, getLogLevelTone } from "@/utils/logs";
 
 export default function LogItem({ log, onClick }) {
-
-
-  /* =====================================================
-  SAFETY NORMALIZATION
-  ===================================================== */
-
-  const level = (log?.level || "INFO").toLowerCase();
-
-  const message = log?.message || "";
-
-  const timestampRaw = log?.timestamp || null;
-
-  const resourceId = log?.resourceId || "—";
-
-  const meta = log?.meta || log?.metadata || {};
-
-
-  /* =====================================================
-  LOCAL STATE
-  ===================================================== */
-
   const [bookmarked, setBookmarked] = useState(false);
 
+  const level = String(log?.level || "INFO").toUpperCase();
+  const message = log?.message || "No message available";
+  const resourceId = log?.resourceId || "No resource";
+  const service = log?.service || "Unknown service";
+  const timestamp = useMemo(() => formatLogTimestamp(log?.timestamp), [log?.timestamp]);
+  const meta = log?.meta || log?.metadata || {};
+  const kind = useMemo(() => classifyLogKind(log), [log]);
+  const preview = message.length > 150 ? `${message.slice(0, 147)}...` : message;
 
-  /* =====================================================
-  DERIVED VALUES
-  ===================================================== */
-
-  const shortMsg = useMemo(() => {
-
-    if (!message) return "—";
-
-    return message.length > 120
-
-      ? message.slice(0, 117) + "…"
-
-      : message;
-
-  }, [message]);
-
-
-  const timestamp = useMemo(() => {
-
-    if (!timestampRaw) return "—";
-
+  async function copyText(text) {
     try {
-
-      return new Date(timestampRaw).toLocaleString();
-
-    } catch {
-
-      return "—";
-
-    }
-
-  }, [timestampRaw]);
-
-
-  const levelColorMap = {
-
-    error: "bg-red-100 text-red-700",
-
-    warn: "bg-amber-100 text-amber-700",
-
-    info: "bg-sky-100 text-sky-700",
-
-    debug: "bg-slate-100 text-slate-700",
-
-  };
-
-
-  const levelColor = levelColorMap[level] || levelColorMap.info;
-
-
-  /* =====================================================
-  ACTIONS
-  ===================================================== */
-
-  async function handleCopy(text) {
-
-    try {
-
       await navigator.clipboard.writeText(text);
-
     } catch {}
-
   }
 
-
-  function handleShare() {
-
-    const text = `${timestamp} — ${message}`;
-
+  function shareLog() {
+    const text = `${timestamp} | ${level} | ${message}`;
     if (navigator.share) {
-
-      navigator.share({
-
-        title: `Log ${level.toUpperCase()}`,
-
-        text,
-
-      });
-
+      navigator.share({ title: `Log ${level}`, text });
+    } else {
+      copyText(text);
     }
-
-    else {
-
-      handleCopy(text);
-
-    }
-
   }
-
-
-  /* =====================================================
-  RENDER
-  ===================================================== */
 
   return (
-
     <div
-
       role="button"
-
       onClick={() => onClick?.(log)}
-
-      className="group cursor-pointer p-3 border rounded-lg hover:shadow-sm active:translate-y-[1px] transition"
-
+      className="group rounded-[24px] border border-slate-200 bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)]"
     >
-
-
-      <div className="flex justify-between gap-3">
-
-
-        {/* LEFT */}
-
-        <div className="flex-1 min-w-0">
-
-
-          <div className="flex items-center gap-3">
-
-
-            <div className={`px-2 py-1 rounded text-xs font-semibold ${levelColor}`}>
-
-              {level.toUpperCase()}
-
-            </div>
-
-
-            <div className="text-xs text-slate-500">
-
-              {timestamp}
-
-            </div>
-
-
-            <div className="text-xs text-slate-600">
-
-              {resourceId}
-
-            </div>
-
-
+      <div className="flex gap-4">
+        <div className="flex-1 space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className={`rounded-full border px-2.5 py-1 font-semibold ${getLogLevelTone(level)}`}>{level}</span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">{kind}</span>
+            <span className="text-slate-500">{timestamp}</span>
           </div>
 
+          <div className="text-sm font-medium leading-7 text-slate-900">{preview}</div>
 
-
-          <div className="mt-2 text-sm break-words text-slate-700">
-
-            {shortMsg}
-
+          <div className="grid gap-2 text-xs text-slate-600 md:grid-cols-3">
+            <div className="rounded-xl bg-slate-50 px-3 py-2">Service: {service}</div>
+            <div className="rounded-xl bg-slate-50 px-3 py-2">Resource: {resourceId}</div>
+            <div className="rounded-xl bg-slate-50 px-3 py-2">Trace: {log?.traceId || "NA"}</div>
           </div>
 
-
-
-          {/* META */}
-
-          {meta && Object.keys(meta).length > 0 && (
-
-            <div className="mt-2 text-xs text-slate-500">
-
-              {
-
-                Object.entries(meta)
-
-                  .slice(0, 3)
-
-                  .map(
-
-                    ([k, v]) => `${k}: ${String(v)}`
-
-                  )
-
-                  .join(" • ")
-
-              }
-
+          {Object.keys(meta).length > 0 && (
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+              {Object.entries(meta)
+                .slice(0, 3)
+                .map(([key, value]) => (
+                  <span key={key} className="rounded-full border border-slate-200 px-2.5 py-1">
+                    {key}: {String(value)}
+                  </span>
+                ))}
             </div>
-
           )}
-
-
         </div>
-
-
-
-        {/* RIGHT ACTIONS */}
 
         <div className="flex flex-col gap-2">
-
-
           <button
-
-            onClick={(e) => {
-
-              e.stopPropagation();
-
-              setBookmarked(prev => !prev);
-
+            onClick={(event) => {
+              event.stopPropagation();
+              setBookmarked((value) => !value);
             }}
-
-            className="p-1 rounded hover:bg-slate-100"
-
+            className="rounded-xl p-2 hover:bg-slate-100"
           >
-
-            <Star
-
-              size={16}
-
-              className={
-
-                bookmarked
-
-                  ? "text-yellow-500"
-
-                  : "text-slate-400"
-
-              }
-
-            />
-
+            <Star size={16} className={bookmarked ? "text-amber-500" : "text-slate-400"} />
           </button>
 
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              copyText(message);
+            }}
+            className="rounded-xl p-2 hover:bg-slate-100"
+          >
+            <Copy size={16} className="text-slate-400" />
+          </button>
 
-
-          <div className="flex gap-2">
-
-
-            <button
-
-              onClick={(e) => {
-
-                e.stopPropagation();
-
-                handleCopy(message);
-
-              }}
-
-              className="p-1 rounded hover:bg-slate-100"
-
-            >
-
-              <Copy size={16} className="text-slate-400" />
-
-            </button>
-
-
-
-            <button
-
-              onClick={(e) => {
-
-                e.stopPropagation();
-
-                handleShare();
-
-              }}
-
-              className="p-1 rounded hover:bg-slate-100"
-
-            >
-
-              <Share2 size={16} className="text-slate-400" />
-
-            </button>
-
-
-          </div>
-
-
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              shareLog();
+            }}
+            className="rounded-xl p-2 hover:bg-slate-100"
+          >
+            <Share2 size={16} className="text-slate-400" />
+          </button>
         </div>
-
-
       </div>
-
-
     </div>
-
   );
-
 }

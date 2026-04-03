@@ -1,180 +1,135 @@
-// src/components/apps/AppCard.jsx
+﻿import { useNavigate } from "react-router-dom";
+import { Activity, Copy, ExternalLink, MoreHorizontal, RefreshCw, Server, Trash2 } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Button } from "@/components/ui/button";
-
-import {
-  MoreHorizontal,
-  Trash2,
-  RefreshCw,
-  ExternalLink,
-  Copy,
-} from "lucide-react";
-
-import { useNavigate } from "react-router-dom";
-
-/**
- * =====================================================
- * Application Card (SaaS Dashboard)
- * =====================================================
- *
- * Features:
- * - open application
- * - rotate key
- * - delete app
- * - copy connection string
- * - professional SaaS UI
- */
+function getEnvStyle(env) {
+  switch (env) {
+    case "PRODUCTION":
+      return "bg-rose-50 text-rose-700 border-rose-200";
+    case "STAGING":
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    default:
+      return "bg-sky-50 text-sky-700 border-sky-200";
+  }
+}
 
 export default function AppCard({ app, onDelete, onRotate }) {
   const navigate = useNavigate();
-
-  /* =====================================================
-     COPY CONNECTION STRING
-  ===================================================== */
 
   async function handleCopyConnection() {
     if (!app.connectionUrl) return;
 
     try {
       await navigator.clipboard.writeText(app.connectionUrl);
-      alert("Connection URL copied");
     } catch {
-      alert("Failed to copy connection URL");
+      console.error("Failed to copy connection URL");
     }
   }
-
-  /* =====================================================
-     OPEN APPLICATION
-  ===================================================== */
 
   function openApp() {
     navigate(`/applications/${app.id}`);
   }
 
-  /* =====================================================
-     ENVIRONMENT BADGE STYLE
-  ===================================================== */
-
-  function getEnvStyle(env) {
-    switch (env) {
-      case "PRODUCTION":
-        return "bg-red-100 text-red-700";
-      case "STAGING":
-        return "bg-yellow-100 text-yellow-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  }
-
-  /* =====================================================
-     UI
-  ===================================================== */
-
   return (
     <Card
-      className="transition shadow-sm cursor-pointer hover:shadow-md"
+      className="group cursor-pointer overflow-hidden rounded-[24px] border-slate-200 bg-white/95 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.12)]"
       onClick={openApp}
     >
-      {/* Header */}
-      <CardHeader className="flex flex-row items-center justify-between">
+      <div className="h-1.5 bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500" />
 
-        <div className="space-y-1">
-          <CardTitle className="text-lg">{app.name}</CardTitle>
-
-          <span
-            className={`text-xs px-2 py-1 rounded ${getEnvStyle(
-              app.environment
-            )}`}
-          >
+      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
+        <div className="space-y-3">
+          <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getEnvStyle(app.environment)}`}>
             {app.environment}
-          </span>
+          </div>
+          <div>
+            <CardTitle className="text-xl text-slate-950">{app.name}</CardTitle>
+            <p className="mt-1 text-sm text-slate-500">Live logs, analytics, and credentials in one place.</p>
+          </div>
         </div>
 
-        {/* Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              onClick={(e) => e.stopPropagation()}
+              className="rounded-2xl border border-slate-200 bg-white"
+              onClick={(event) => event.stopPropagation()}
             >
-              <MoreHorizontal />
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end">
-
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                openApp();
-              }}
-            >
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Open
+          <DropdownMenuContent align="end" className="w-56 rounded-2xl border-slate-200 p-2">
+            <DropdownMenuItem onClick={(event) => { event.stopPropagation(); openApp(); }} className="rounded-xl">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open application
             </DropdownMenuItem>
 
             {app.connectionUrl && (
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCopyConnection();
-                }}
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                Copy Connection URL
+              <DropdownMenuItem onClick={(event) => { event.stopPropagation(); handleCopyConnection(); }} className="rounded-xl">
+                <Copy className="mr-2 h-4 w-4" />
+                Copy connection URL
               </DropdownMenuItem>
             )}
 
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onRotate(app.id);
-              }}
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Rotate API Key
+            <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onRotate(app.id); }} className="rounded-xl">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Rotate API key
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              className="text-red-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(app.id);
-              }}
+              className="rounded-xl text-red-600 focus:text-red-600"
+              onClick={(event) => { event.stopPropagation(); onDelete(app.id); }}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete application
             </DropdownMenuItem>
-
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
 
-      {/* Body */}
-      <CardContent>
-        <div className="space-y-1 text-xs text-muted-foreground">
-          {app.connectionUrl && (
-            <div className="truncate">
-              {app.connectionUrl}
-            </div>
-          )}
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <InfoTile icon={Activity} label="Status" value="Ready for monitoring" />
+          <InfoTile icon={Server} label="Ingestion" value="Connection available" />
+        </div>
+
+        {app.connectionUrl && (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
+            <div className="mb-1 font-medium text-slate-700">Connection URL</div>
+            <div className="truncate">{app.connectionUrl}</div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-slate-500">Open the app to review logs, analytics, and live events.</span>
+          <Button className="rounded-2xl" onClick={(event) => { event.stopPropagation(); openApp(); }}>
+            Open
+          </Button>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+function InfoTile({ icon: Icon, label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <div className="mt-2 text-sm font-medium text-slate-900">{value}</div>
+    </div>
+  );
+}
+

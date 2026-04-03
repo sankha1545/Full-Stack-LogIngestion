@@ -1,5 +1,4 @@
-import Navbar from "../layout/Navbar";
-
+﻿import Navbar from "../layout/Navbar";
 import Hero from "../components/landingpage/Hero";
 import Features from "../components/landingpage/Features";
 import About from "../components/landingpage/About";
@@ -11,21 +10,26 @@ import Footer from "../components/landingpage/Footer";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-[#0b0f1a] text-white overflow-hidden">
-      {/* Ambient background glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-indigo-600/20 blur-[160px]" />
+    <div className="relative min-h-screen overflow-hidden bg-[#07111f] text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-[-12rem] h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-sky-500/16 blur-[180px]" />
+        <div className="absolute bottom-[-10rem] right-[-6rem] h-[28rem] w-[28rem] rounded-full bg-cyan-400/12 blur-[160px]" />
+        <div className="absolute left-[-8rem] top-[32rem] h-[24rem] w-[24rem] rounded-full bg-blue-700/10 blur-[150px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,17,31,0)_0%,rgba(7,17,31,0.34)_40%,rgba(7,17,31,0.92)_100%)]" />
       </div>
 
       <Navbar />
 
-      <Hero />
-      <Features />
-      <About />
-      <HowItWorks />
-      <UseCases />
-      <Architecture />
-      <CTA />
+      <main className="relative z-10">
+        <Hero />
+        <Features />
+        <About />
+        <HowItWorks />
+        <UseCases />
+        <Architecture />
+        <CTA />
+      </main>
+
       <Footer />
     </div>
   );

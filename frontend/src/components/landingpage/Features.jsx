@@ -1,106 +1,68 @@
-import {
-  Zap,
-  Filter,
-  BarChart3,
-  Shield,
-  Clock,
-  Layers
-} from "lucide-react";
+﻿import { Zap, Filter, BarChart3, Shield, Clock, Layers } from "lucide-react";
 
 const FEATURES = [
   {
-    title: "Real-time ingestion",
-    description:
-      "Stream logs as they are generated with ultra-low latency pipelines.",
-    icon: Zap
+    title: "Live ingestion",
+    description: "Stream logs instantly from applications and services with a cleaner live pipeline experience.",
+    icon: Zap,
   },
   {
-    title: "Advanced filtering",
-    description:
-      "Slice logs by level, service, traceId, timestamp, and metadata.",
-    icon: Filter
+    title: "Powerful filtering",
+    description: "Search by level, service, trace, resource, and metadata without losing context.",
+    icon: Filter,
   },
   {
-    title: "Built for scale",
-    description:
-      "Designed to handle millions of events without slowing down.",
-    icon: Layers
+    title: "Scalable architecture",
+    description: "Designed for high-volume systems with a UI that still feels lightweight and fast.",
+    icon: Layers,
   },
   {
-    title: "Fast querying",
-    description:
-      "Search large log volumes instantly with optimized indexing.",
-    icon: Clock
+    title: "Faster investigation",
+    description: "Move from alert to root cause with tighter hierarchy, clearer states, and better detail views.",
+    icon: Clock,
   },
   {
-    title: "Actionable insights",
-    description:
-      "Visualize trends and error patterns to debug faster.",
-    icon: BarChart3
+    title: "Animated analytics",
+    description: "See severity trends and event patterns in polished visualizations that are easier to read.",
+    icon: BarChart3,
   },
   {
     title: "Secure by default",
-    description:
-      "Role-based access and isolated log streams for each team.",
-    icon: Shield
-  }
+    description: "Keep teams isolated with role-aware access and safer application credential workflows.",
+    icon: Shield,
+  },
 ];
 
 export default function Features() {
   return (
-    <section
-      id="features"
-      className="relative px-6 py-32 overflow-hidden"
-    >
-      {/* Background separation */}
-      <div className="absolute inset-0 bg-black/30" />
-
-      <div className="relative mx-auto max-w-7xl">
-
-        {/* Section header */}
-        <div className="max-w-3xl mx-auto mb-20 text-center">
-          <h2 className="text-3xl font-bold md:text-4xl">
-            Everything you need to understand your logs
+    <section id="features" className="relative px-6 py-28">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-14 max-w-3xl">
+          <div className="inline-flex rounded-full border border-white/10 bg-white/6 px-4 py-1.5 text-sm text-sky-200">
+            Product strengths
+          </div>
+          <h2 className="mt-6 text-3xl font-semibold tracking-tight text-white md:text-4xl">
+            A more standard, user-friendly observability experience from first click to investigation.
           </h2>
-          <p className="mt-4 text-lg text-white/70">
-            LogScope gives engineering teams clarity, speed, and control
-            across their entire logging pipeline.
+          <p className="mt-4 text-lg leading-8 text-slate-300">
+            The landing experience now mirrors the product direction: clearer hierarchy, cleaner cards, and stronger guidance for the user journey.
           </p>
         </div>
 
-        {/* Feature grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature) => {
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {FEATURES.map((feature, index) => {
             const Icon = feature.icon;
-
             return (
               <div
                 key={feature.title}
-                className="
-                  group relative rounded-2xl border border-white/10
-                  bg-white/5 p-6
-                  transition-all duration-300
-                  hover:-translate-y-1
-                  hover:bg-white/10
-                  hover:shadow-[0_0_40px_rgba(99,102,241,0.15)]
-                "
+                className="group rounded-[28px] border border-white/10 bg-white/[0.05] p-7 transition duration-300 hover:-translate-y-1 hover:border-sky-400/30 hover:bg-white/[0.08] hover:shadow-[0_20px_70px_rgba(14,165,233,0.08)]"
+                style={{ animationDelay: `${index * 70}ms` }}
               >
-                {/* Icon */}
-                <div className="flex items-center justify-center w-12 h-12 mb-6 text-indigo-400 transition  rounded-xl bg-indigo-500/10 ring-1 ring-indigo-500/30 group-hover:bg-indigo-500/20">
-                  <Icon className="w-6 h-6" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/16 to-blue-500/10 ring-1 ring-sky-400/20">
+                  <Icon className="h-6 w-6 text-sky-300" />
                 </div>
-
-                {/* Content */}
-                <h3 className="mb-2 text-xl font-semibold">
-                  {feature.title}
-                </h3>
-
-                <p className="leading-relaxed text-white/70">
-                  {feature.description}
-                </p>
-
-                {/* Hover accent */}
-                <span className="absolute inset-x-0 bottom-0 h-px transition opacity-0 pointer-events-none  bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent group-hover:opacity-100" />
+                <h3 className="mt-6 text-xl font-semibold text-white">{feature.title}</h3>
+                <p className="mt-3 leading-7 text-slate-300">{feature.description}</p>
               </div>
             );
           })}

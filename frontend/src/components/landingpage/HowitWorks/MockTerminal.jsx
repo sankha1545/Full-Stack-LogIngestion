@@ -1,44 +1,56 @@
-// src/components/landingpage/HowitWorks/MockTerminal.jsx
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 
-/**
- * MockTerminal — small streaming terminal preview component
- * - keeps a small in-memory ring buffer of lines
- */
-
-export default function MockTerminal() {
+export default function MockTerminal({ compact = false }) {
   const [lines, setLines] = useState([]);
   const index = useRef(0);
 
   useEffect(() => {
     const data = [
-      '[2026-02-06T07:22:10Z] service=auth level=info msg="login success" user_id=42',
-      '[2026-02-06T07:22:11Z] service=orders level=warn msg="slow db" latency_ms=420',
-      '[2026-02-06T07:22:12Z] service=payments level=error msg="charge failed" err_code=402',
-      '[2026-02-06T07:22:13Z] service=auth level=info msg="token refresh" user_id=17',
-      '[2026-02-06T07:22:14Z] service=search level=info msg="index updated" items=53'
+      { level: "INFO", line: '[2026-04-03T12:42:10Z] service=auth msg="login success" user_id=42 region=ap-south-1' },
+      { level: "WARN", line: '[2026-04-03T12:42:11Z] service=orders msg="slow query detected" latency_ms=420 trace_id=ord-291' },
+      { level: "ERROR", line: '[2026-04-03T12:42:12Z] service=payments msg="charge failed" err_code=402 span_id=pay-771' },
+      { level: "INFO", line: '[2026-04-03T12:42:13Z] service=search msg="index updated" documents=53' },
+      { level: "DEBUG", line: '[2026-04-03T12:42:14Z] service=worker msg="job retried" queue=emails attempt=2' },
+      { level: "FATAL", line: '[2026-04-03T12:42:15Z] service=api msg="upstream timeout" dependency=billing-gateway' },
     ];
 
-    const t = setInterval(() => {
-      setLines(prev => {
+    const timer = setInterval(() => {
+      setLines((prev) => {
         const next = [...prev, data[index.current % data.length]];
-        if (next.length > 6) next.shift();
+        if (next.length > (compact ? 5 : 7)) next.shift();
         return next;
       });
-      index.current++;
-    }, 900);
+      index.current += 1;
+    }, compact ? 1100 : 900);
 
-    return () => clearInterval(t);
-  }, []);
+    return () => clearInterval(timer);
+  }, [compact]);
 
   return (
-    <div className="px-3 pb-3 h-[180px] text-sm font-mono text-white/90 overflow-hidden">
-      {lines.map((l, i) => (
-        <div key={i} className="flex py-1">
-          <span className="mr-3 text-white/60">›</span>
-          <span className="truncate">{l}</span>
-        </div>
-      ))}
+    <div className={`overflow-hidden rounded-2xl bg-slate-950 ${compact ? "min-h-[220px]" : "min-h-[260px]"}`}>
+      <div className="space-y-2 px-3 py-3 font-mono text-sm text-slate-200">
+        {lines.map((entry, i) => (
+          <div key={`${entry.line}-${i}`} className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2">
+            <span className={`mt-1 h-2.5 w-2.5 rounded-full ${getDotTone(entry.level)}`} />
+            <span className="flex-1 break-all leading-6 text-slate-200">{entry.line}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
+}
+
+function getDotTone(level) {
+  switch (level) {
+    case "ERROR":
+      return "bg-red-400";
+    case "WARN":
+      return "bg-amber-400";
+    case "FATAL":
+      return "bg-rose-400";
+    case "DEBUG":
+      return "bg-slate-400";
+    default:
+      return "bg-emerald-400";
+  }
 }

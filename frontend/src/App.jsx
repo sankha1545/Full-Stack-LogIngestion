@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+﻿import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
 import Sidebar from "./components/Sidebar";
 import ConfirmLogoutModal from "@/components/ui/ConfirmLogoutModal";
-
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,274 +11,154 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-import { Menu, LogOut, User, Settings } from "lucide-react";
-
-/* GLOBAL TOAST */
-import { Toaster } from "react-hot-toast";
-
-/* ⭐ CRITICAL FIX — SOCKET */
+import { Menu, LogOut, User, Settings, BellDot, Sparkles } from "lucide-react";
 import { getSocket } from "@/services/socket";
 
-export default function App() {
+const PAGE_META = {
+  "/dashboard": {
+    title: "Overview",
+    subtitle: "A clear snapshot of application health, activity, and actions.",
+  },
+  "/applications": {
+    title: "Applications",
+    subtitle: "Manage connected apps, credentials, and log ingestion setup.",
+  },
+  "/analytics": {
+    title: "Analytics",
+    subtitle: "Animated visualizations to understand log trends and severity patterns.",
+  },
+  "/settings": {
+    title: "Settings",
+    subtitle: "Profile, security, appearance, and notification preferences.",
+  },
+};
 
+export default function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout, user } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-
-  /* =====================================================
-     ⭐ SOCKET INITIALIZATION (CRITICAL FIX)
-  ===================================================== */
+  const currentMeta =
+    Object.entries(PAGE_META).find(([path]) => location.pathname.startsWith(path))?.[1] || {
+      title: "LogScope",
+      subtitle: "Modern observability with live logs, analytics, and application controls.",
+    };
 
   useEffect(() => {
-
     if (!user) return;
 
-    console.log("🚀 Initializing global socket...");
-
     const socket = getSocket();
-
     socket.connect();
 
     return () => {
-
       socket.disconnect();
-
     };
-
   }, [user]);
 
-
-  /* =====================================================
-     SAFE LOGOUT
-  ===================================================== */
-
-  const handleLogout = async () => {
-
-    try {
-
-      const socket = getSocket();
-
-      socket.disconnect();
-
-      await logout();
-
-    }
-
-    catch (err) {
-
-      console.error("Logout failed:", err);
-
-    }
-
-    finally {
-
-      navigate("/login", { replace: true });
-
-    }
-
-  };
-
-
-  /* =====================================================
-     ESC CLOSE SIDEBAR
-  ===================================================== */
-
   useEffect(() => {
-
-    const onKeyDown = (e) => {
-
-      if (e.key === "Escape") {
-
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
         setSidebarOpen(false);
-
       }
-
     };
 
     document.addEventListener("keydown", onKeyDown);
-
     return () => document.removeEventListener("keydown", onKeyDown);
-
   }, []);
 
-
-  /* =====================================================
-     SESSION SAFETY
-  ===================================================== */
-
   useEffect(() => {
-
     if (user === null) {
-
       navigate("/login", { replace: true });
-
     }
+  }, [navigate, user]);
 
-  }, [user, navigate]);
-
+  async function handleLogout() {
+    try {
+      const socket = getSocket();
+      socket.disconnect();
+      await logout();
+    } catch (err) {
+      console.error("Logout failed:", err);
+    } finally {
+      navigate("/login", { replace: true });
+    }
+  }
 
   return (
+    <div className="flex min-h-screen text-slate-900">
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
 
-    <>
+      <div className="relative flex min-h-screen flex-1 flex-col">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_32%)]" />
 
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: "#fff",
-            color: "#0f172a",
-            border: "1px solid #e2e8f0",
-          },
-        }}
-      />
-
-
-      <div className="flex min-h-screen bg-slate-50 text-slate-900">
-
-
-        {/* Desktop Sidebar */}
-
-        <div className="hidden lg:block">
-
-          <Sidebar />
-
-        </div>
-
-
-        {/* Main */}
-
-        <div className="flex flex-col flex-1 w-full">
-
-
-          {/* Header */}
-
-          <header className="sticky top-0 z-40 flex items-center h-16 gap-3 px-4 bg-white border-b sm:px-6">
-
-
+        <header className="sticky top-0 z-40 border-b border-white/70 bg-white/80 backdrop-blur-xl">
+          <div className="mx-auto flex h-20 w-full max-w-[1600px] items-center gap-4 px-4 sm:px-6 lg:px-8">
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden hover:bg-slate-100"
+              className="rounded-2xl border border-slate-200 bg-white lg:hidden"
               onClick={() => setSidebarOpen(true)}
             >
-
-              <Menu className="w-5 h-5" />
-
+              <Menu className="h-5 w-5" />
             </Button>
 
-
-            <div className="flex flex-col">
-
-              <span className="text-base font-semibold">
-
-                LogScope
-
-              </span>
-
-              <span className="text-xs text-slate-500">
-
-                Real-time log ingestion & querying
-
-              </span>
-
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-600">
+                <Sparkles className="h-3.5 w-3.5" />
+                Observability Workspace
+              </div>
+              <div className="mt-1 flex flex-col gap-0.5">
+                <h1 className="truncate text-xl font-semibold tracking-tight text-slate-950">{currentMeta.title}</h1>
+                <p className="truncate text-sm text-slate-500">{currentMeta.subtitle}</p>
+              </div>
             </div>
 
-
-            <div className="flex-1" />
-
-
-            {/* Account */}
+            <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 shadow-sm sm:flex">
+              <BellDot className="h-4 w-4 text-sky-600" />
+              Live system updates enabled
+            </div>
 
             <DropdownMenu>
-
               <DropdownMenuTrigger asChild>
-
-                <Button variant="ghost" size="sm">
-
-                  <User className="w-4 h-4" />
-
-                  {user?.email || "Account"}
-
+                <Button variant="ghost" className="h-11 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm">
+                  <User className="h-4 w-4" />
+                  <span className="max-w-[180px] truncate">{user?.email || "Account"}</span>
                 </Button>
-
               </DropdownMenuTrigger>
 
-
-              <DropdownMenuContent align="end">
-
-
-                <DropdownMenuItem
-                  onClick={() => navigate("/settings")}
-                >
-
-                  <Settings className="w-4 h-4 mr-2" />
-
+              <DropdownMenuContent align="end" className="w-56 rounded-2xl border-slate-200 p-2">
+                <DropdownMenuItem onClick={() => navigate("/settings")} className="rounded-xl">
+                  <Settings className="mr-2 h-4 w-4" />
                   Profile settings
-
                 </DropdownMenuItem>
-
-
                 <DropdownMenuItem
                   onClick={() => setLogoutOpen(true)}
-                  className="text-red-600"
+                  className="rounded-xl text-red-600 focus:text-red-600"
                 >
-
-                  <LogOut className="w-4 h-4 mr-2" />
-
+                  <LogOut className="mr-2 h-4 w-4" />
                   Logout
-
                 </DropdownMenuItem>
-
-
               </DropdownMenuContent>
-
-
             </DropdownMenu>
+          </div>
+        </header>
 
-
-          </header>
-
-
-          {/* Content */}
-
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
-
+        <main className="relative z-10 mx-auto flex w-full max-w-[1600px] flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="w-full animate-fade-up">
             <Outlet />
-
-          </main>
-
-
-        </div>
-
-
-        {/* Mobile Sidebar */}
-
-        <Sidebar
-          mobile
-          open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
-
-
-        {/* Logout Modal */}
-
-        <ConfirmLogoutModal
-          open={logoutOpen}
-          onOpenChange={setLogoutOpen}
-          onConfirm={handleLogout}
-        />
-
-
+          </div>
+        </main>
       </div>
 
+      <Sidebar mobile open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-    </>
-
+      <ConfirmLogoutModal open={logoutOpen} onOpenChange={setLogoutOpen} onConfirm={handleLogout} />
+    </div>
   );
-
 }
+

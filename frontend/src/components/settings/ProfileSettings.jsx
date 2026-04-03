@@ -1,54 +1,28 @@
-// src/components/settings/ProfileSettings.jsx
-
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { Mail, MapPin, ShieldCheck, Sparkles, User } from "lucide-react";
 
 import { updateProfile } from "@/api/profile";
 import { fetchCountries, fetchStates } from "@/api/geodata";
 import { useAuth } from "@/context/AuthContext";
-
 import EditProfileModal from "@/components/profile/EditProfileModal";
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { Mail, MapPin, User, ShieldCheck } from "lucide-react";
-
 export default function ProfileSettings() {
-  /* =====================================================
-     AUTH — SINGLE SOURCE OF TRUTH
-  ===================================================== */
-
   const { user, refreshUser, hydrating } = useAuth();
-
   const profile = user?.profile || {};
-
-  /* =====================================================
-     LOCAL STATE
-  ===================================================== */
 
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
-
   const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
-
-  /* =====================================================
-     LOAD COUNTRIES
-  ===================================================== */
 
   useEffect(() => {
     let mounted = true;
@@ -58,12 +32,10 @@ export default function ProfileSettings() {
       .then((list) => mounted && setCountries(list || []))
       .finally(() => mounted && setLoadingCountries(false));
 
-    return () => (mounted = false);
+    return () => {
+      mounted = false;
+    };
   }, []);
-
-  /* =====================================================
-     LOAD STATES WHEN COUNTRY CHANGES
-  ===================================================== */
 
   useEffect(() => {
     if (!form?.countryCode) {
@@ -71,7 +43,7 @@ export default function ProfileSettings() {
       return;
     }
 
-    const country = countries.find((c) => c.code === form.countryCode);
+    const country = countries.find((item) => item.code === form.countryCode);
     if (!country) return;
 
     let mounted = true;
@@ -81,35 +53,27 @@ export default function ProfileSettings() {
       .then((list) => mounted && setStates(list || []))
       .finally(() => mounted && setLoadingStates(false));
 
-    return () => (mounted = false);
-  }, [form?.countryCode, countries]);
-
-  /* =====================================================
-     OPEN EDIT MODAL (FIXED)
-  ===================================================== */
+    return () => {
+      mounted = false;
+    };
+  }, [countries, form?.countryCode]);
 
   function openEdit() {
     setForm({
       firstName: profile?.firstName || "",
       lastName: profile?.lastName || "",
-      username: user?.username || "", // ⭐ FIXED
+      username: user?.username || "",
       email: user?.email || "",
       countryCode: profile?.countryCode || "",
       state: profile?.state || "",
     });
 
     if (profile?.country) {
-      fetchStates(profile.country).then((list) =>
-        setStates(list || [])
-      );
+      fetchStates(profile.country).then((list) => setStates(list || []));
     }
 
     setEditOpen(true);
   }
-
-  /* =====================================================
-     SAVE PROFILE (ENTERPRISE SAFE)
-  ===================================================== */
 
   async function handleSave() {
     setSaving(true);
@@ -119,20 +83,15 @@ export default function ProfileSettings() {
         firstName: form.firstName || null,
         lastName: form.lastName || null,
         username: form.username || null,
-        country:
-          countries.find((c) => c.code === form.countryCode)?.name || null,
+        country: countries.find((item) => item.code === form.countryCode)?.name || null,
         countryCode: form.countryCode || null,
         state: form.state || null,
       };
 
       await updateProfile(payload);
-
-      // ⭐ ALWAYS REFRESH GLOBAL USER
       await refreshUser();
-
       setEditOpen(false);
       toast.success("Your profile saved successfully");
-
     } catch (err) {
       toast.error(err?.message || "Failed to save profile");
     } finally {
@@ -140,112 +99,77 @@ export default function ProfileSettings() {
     }
   }
 
-  /* =====================================================
-     DERIVED VALUES
-  ===================================================== */
-
-  const fullName =
-    `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() ||
-    "Unnamed User";
+  const fullName = `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() || "Unnamed User";
+  const location = profile?.country ? `${profile.country}${profile?.state ? `, ${profile.state}` : ""}` : "Not set";
+  const initials = `${profile?.firstName?.[0] || user?.username?.[0] || "U"}${profile?.lastName?.[0] || ""}`.toUpperCase();
 
   if (hydrating) {
     return (
       <div className="p-8">
-        <Skeleton className="w-64 h-8" />
+        <Skeleton className="h-8 w-64" />
       </div>
     );
   }
 
-  /* =====================================================
-     UI
-  ===================================================== */
-
   return (
-    <div className="max-w-5xl px-4 py-8 mx-auto space-y-8">
-
-      {/* PROFILE HEADER */}
-      <Card className="border shadow-sm rounded-2xl">
-        <CardContent className="flex flex-col items-center gap-6 p-8 md:flex-row md:items-center md:justify-between">
-
-          <div className="flex items-center gap-6">
-            <div className="p-1 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500">
-              <Avatar className="w-20 h-20 border-4 border-white">
+    <div className="space-y-8">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-sm">
+        <CardContent className="flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-5">
+            <div className="rounded-full bg-gradient-to-br from-sky-500 to-blue-600 p-1.5 shadow-lg shadow-sky-100">
+              <Avatar className="h-20 w-20 border-4 border-white">
                 <AvatarImage src="/avatar.png" />
-                <AvatarFallback>
-                  {profile?.firstName?.[0] || "U"}
-                </AvatarFallback>
+                <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold">{fullName}</h2>
-
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="gap-1">
-                  <ShieldCheck className="w-3 h-3" />
-                  Verified
+              <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+                <Sparkles className="h-3.5 w-3.5" />
+                Account profile
+              </div>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{fullName}</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="gap-1 rounded-full bg-emerald-50 text-emerald-700">
+                  <ShieldCheck className="h-3 w-3" />
+                  Verified user
                 </Badge>
               </div>
             </div>
           </div>
 
-          <Button onClick={openEdit} size="lg">
-            Edit Profile
+          <Button onClick={openEdit} size="lg" className="rounded-2xl px-5">
+            Edit profile
           </Button>
         </CardContent>
-      </Card>
+      </section>
 
-      {/* INFO GRID */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-
-        <Card className="border shadow-sm rounded-2xl">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="rounded-[28px] border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle>Account Information</CardTitle>
-            <CardDescription>
-              Your personal and login details
-            </CardDescription>
+            <CardTitle>Account information</CardTitle>
+            <CardDescription>Your core identity details in a cleaner summary layout.</CardDescription>
           </CardHeader>
-
-          <CardContent className="space-y-4 text-sm">
-            <InfoRow icon={User} label="Username" value={user?.username} />
-            <InfoRow icon={Mail} label="Email" value={user?.email} />
-            <InfoRow
-              icon={MapPin}
-              label="Location"
-              value={
-                profile?.country
-                  ? `${profile.country}${profile?.state ? ` — ${profile.state}` : ""}`
-                  : "—"
-              }
-            />
+          <CardContent className="space-y-4">
+            <InfoRow icon={User} label="Username" value={user?.username || "Not set"} />
+            <InfoRow icon={Mail} label="Email" value={user?.email || "Not set"} />
+            <InfoRow icon={MapPin} label="Location" value={location} />
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm rounded-2xl">
+        <Card className="rounded-[28px] border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle>Account Status</CardTitle>
-            <CardDescription>
-              Security & verification details
-            </CardDescription>
+            <CardTitle>Profile status</CardTitle>
+            <CardDescription>Quick account signals users expect in a standard settings page.</CardDescription>
           </CardHeader>
-
-          <CardContent className="space-y-4 text-sm">
-            <div className="flex items-center justify-between">
-              <span>Email verified</span>
-              <Badge variant="default">Yes</Badge>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span>Profile completeness</span>
-              <Badge variant="secondary">
-                {profile?.firstName ? "Complete" : "Incomplete"}
-              </Badge>
-            </div>
+          <CardContent className="space-y-4">
+            <StatusRow label="Email verified" value="Yes" tone="emerald" />
+            <StatusRow label="Profile completeness" value={profile?.firstName ? "Complete" : "Needs attention"} tone={profile?.firstName ? "sky" : "amber"} />
+            <StatusRow label="Edit access" value="Available" tone="slate" />
           </CardContent>
         </Card>
       </div>
 
-      {/* EDIT MODAL */}
       <EditProfileModal
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -257,27 +181,38 @@ export default function ProfileSettings() {
         states={states}
         loadingCountries={loadingCountries}
         loadingStates={loadingStates}
-        originalValues={{
-          ...profile,
-          username: user?.username,
-        }}
+        originalValues={{ ...profile, username: user?.username }}
       />
     </div>
   );
 }
 
-/* =====================================================
-   SMALL REUSABLE ROW
-===================================================== */
-
 function InfoRow({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Icon className="w-4 h-4" />
-        {label}
+    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="flex items-center gap-3 text-slate-600">
+        <div className="rounded-xl bg-white p-2 shadow-sm">
+          <Icon className="h-4 w-4" />
+        </div>
+        <span>{label}</span>
       </div>
-      <div className="font-medium">{value || "—"}</div>
+      <div className="font-medium text-slate-950">{value}</div>
+    </div>
+  );
+}
+
+function StatusRow({ label, value, tone }) {
+  const tones = {
+    emerald: "bg-emerald-50 text-emerald-700",
+    sky: "bg-sky-50 text-sky-700",
+    amber: "bg-amber-50 text-amber-700",
+    slate: "bg-slate-100 text-slate-700",
+  };
+
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3">
+      <span className="text-slate-600">{label}</span>
+      <span className={`rounded-full px-3 py-1 text-xs font-medium ${tones[tone]}`}>{value}</span>
     </div>
   );
 }

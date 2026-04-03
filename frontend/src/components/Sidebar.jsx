@@ -1,258 +1,240 @@
-// src/components/ui/sidebar/Sidebar.tsx
-import React,{useCallback,useEffect,useRef,useState}from"react";
-import{NavLink,useNavigate}from"react-router-dom";
-import{Button}from"@/components/ui/button";
-import{Separator}from"@/components/ui/separator";
-import{Avatar,AvatarFallback,AvatarImage}from"@/components/ui/avatar";
-import{ScrollArea}from"@/components/ui/scroll-area";
-import{Tooltip}from"@/components/ui/tooltip";
-import{
-Home,
-BarChart3,
-Settings,
-Plus,
-HelpCircle,
-X,
-ChevronLeft,
-ChevronRight,
-}from"lucide-react";
+﻿import React, { useCallback, useEffect, useRef, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  LayoutDashboard,
+  Boxes,
+  BarChart3,
+  Settings,
+  BookOpen,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from "lucide-react";
 
-/* Navigation config */
-const NAV_ITEMS=[
-{label:"Dashboard",path:"/dashboard",icon:Home},
-{label:"Analytics",path:"/analytics",icon:BarChart3},
-{label:"Settings",path:"/settings",icon:Settings},
+const NAV_ITEMS = [
+  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { label: "Applications", path: "/applications", icon: Boxes },
+  { label: "Analytics", path: "/analytics", icon: BarChart3 },
+  { label: "Settings", path: "/settings", icon: Settings },
 ];
 
-function SidebarInner({mobile=false,open=false,onClose}){
-const navigate=useNavigate();
-const[collapsed,setCollapsed]=useState(false);
-const firstNavRef=useRef(null);
-const[user,setUser]=useState(null);
-const[profile,setProfile]=useState(null);
+function SidebarInner({ mobile = false, open = false, onClose }) {
+  const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const firstNavRef = useRef(null);
 
-/* Load user from JWT */
-useEffect(()=>{
-try{
-const token=localStorage.getItem("token");
-if(!token)return;
-const raw=token.split(".")[1];
-if(!raw)return;
-const payload=JSON.parse(atob(raw));
-setUser(payload);
-}catch{console.debug("Sidebar: invalid token");}
-},[]);
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setUser(payload);
+    } catch {
+      console.debug("Sidebar: invalid token");
+    }
+  }, []);
 
-/* Fetch profile */
-useEffect(()=>{
-let mounted=true;
-const fetchProfile=async()=>{
-try{
-const token=localStorage.getItem("token");
-if(!token)return;
-const res=await fetch("/api/profile",{headers:{Authorization:`Bearer ${token}`}});
-if(!mounted)return;
-if(res.ok){
-const data=await res.json();
-setProfile(data);
-}
-}catch{console.debug("Sidebar: profile load failed");}
-};
-fetchProfile();
-return()=>{mounted=false};
-},[]);
+  useEffect(() => {
+    let mounted = true;
 
-const fullName=profile?.firstName&&profile?.lastName
-?`${profile.firstName} ${profile.lastName}`
-:user?.username||"User";
+    async function fetchProfile() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const res = await fetch("/api/profile", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-const email=user?.email||"";
+        if (!mounted || !res.ok) return;
+        const data = await res.json();
+        setProfile(data);
+      } catch {
+        console.debug("Sidebar: profile load failed");
+      }
+    }
 
-const initials=fullName?.split(" ")
-.map(n=>n[0]||"")
-.join("")
-.substring(0,2)
-.toUpperCase();
+    fetchProfile();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-/* ESC close mobile */
-useEffect(()=>{
-if(!mobile||!open)return;
-const onKey=e=>e.key==="Escape"&&onClose?.();
-window.addEventListener("keydown",onKey);
-return()=>window.removeEventListener("keydown",onKey);
-},[mobile,open,onClose]);
+  useEffect(() => {
+    if (!mobile || !open) return;
 
-/* Autofocus mobile */
-useEffect(()=>{
-if(mobile&&open){
-const t=setTimeout(()=>firstNavRef.current?.focus?.(),160);
-return()=>clearTimeout(t);
-}
-},[mobile,open]);
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        onClose?.();
+      }
+    };
 
-const toggleCollapsed=useCallback(()=>setCollapsed(v=>!v),[]);
-const handleClose=useCallback(()=>onClose?.(),[onClose]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobile, onClose, open]);
 
-/* Navigate + close mobile sidebar */
-const handleNavClick=useCallback((path)=>{
-navigate(path);
-if(mobile)onClose?.();
-},[navigate,mobile,onClose]);
+  useEffect(() => {
+    if (mobile && open) {
+      const timeout = setTimeout(() => firstNavRef.current?.focus?.(), 150);
+      return () => clearTimeout(timeout);
+    }
+  }, [mobile, open]);
 
-return(
-<>
-{mobile&&open&&(
-<div
-className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-onClick={handleClose}
-/>
-)}
+  const fullName =
+    profile?.firstName && profile?.lastName
+      ? `${profile.firstName} ${profile.lastName}`
+      : user?.username || "Workspace User";
 
-<aside
-className={`
-${mobile?"fixed top-0 left-0 z-[100] h-full transform transition-transform duration-300":"sticky top-0"}
-${mobile?(open?"translate-x-0":"-translate-x-full"):""}
-${collapsed&&!mobile?"w-[88px]":"w-72"}
-bg-white border-r flex flex-col
-`}
-style={{minHeight:"100dvh"}}
-aria-label="Sidebar"
->
+  const initials = fullName
+    .split(" ")
+    .map((part) => part[0] || "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
-{/* Brand */}
-<div className="flex items-center justify-between px-4 py-5">
-<div className="flex items-center gap-3">
-<div className="relative flex items-center justify-center shadow-sm w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
-<div className="w-5 h-5 rounded-md bg-white/90"/>
-</div>
+  const handleClose = useCallback(() => onClose?.(), [onClose]);
 
-{!collapsed&&(
-<div className="leading-tight">
-<div className="text-lg font-bold tracking-tight">LogScope</div>
-<div className="text-xs text-slate-500">Observability platform</div>
-</div>
-)}
-</div>
+  const handleNavigate = useCallback(
+    (path) => {
+      navigate(path);
+      if (mobile) {
+        onClose?.();
+      }
+    },
+    [mobile, navigate, onClose]
+  );
 
-<div className="flex items-center gap-1">
+  return (
+    <>
+      {mobile && open && <div className="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm" onClick={handleClose} />}
 
-{!mobile&&(
-<Tooltip content={collapsed?"Expand sidebar":"Collapse sidebar"}>
-<Button variant="ghost" size="icon" onClick={toggleCollapsed}>
-{collapsed?<ChevronRight className="w-4 h-4"/>:<ChevronLeft className="w-4 h-4"/>}
-</Button>
-</Tooltip>
-)}
+      <aside
+        className={`
+          ${mobile ? "fixed left-0 top-0 z-[100] h-full transform transition-transform duration-300" : "sticky top-0"}
+          ${mobile ? (open ? "translate-x-0" : "-translate-x-full") : ""}
+          ${collapsed && !mobile ? "w-[94px]" : "w-80"}
+          flex min-h-screen flex-col border-r border-white/60 bg-slate-950 text-slate-50 shadow-[0_0_40px_rgba(15,23,42,0.12)]
+        `}
+      >
+        <div className="border-b border-white/10 px-4 py-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-lg shadow-blue-900/30">
+                <div className="h-5 w-5 rounded-md bg-white/90" />
+              </div>
 
-{mobile&&(
-<Button variant="ghost" size="icon" onClick={handleClose}>
-<X className="w-5 h-5"/>
-</Button>
-)}
+              {!collapsed && (
+                <div>
+                  <div className="text-lg font-semibold tracking-tight">LogScope</div>
+                  <div className="text-xs text-slate-400">Advanced monitoring workspace</div>
+                </div>
+              )}
+            </div>
 
-</div>
-</div>
+            <div className="flex items-center gap-1">
+              {!mobile && (
+                <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={() => setCollapsed((value) => !value)}>
+                  {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </Button>
+              )}
 
-{/* Navigation */}
-<ScrollArea className="flex-1 px-3">
+              {mobile && (
+                <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={handleClose}>
+                  <X className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
+          </div>
 
-<nav className="space-y-1">
+          {!collapsed && (
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Quick action</div>
+              <div className="mt-2 text-sm leading-6 text-slate-300">Create and connect a new application, then start tailing live logs instantly.</div>
+              <Button className="mt-4 w-full rounded-xl bg-white text-slate-950 hover:bg-slate-100" onClick={() => handleNavigate("/applications")}>
+                <Plus className="mr-2 h-4 w-4" />
+                Open Applications
+              </Button>
+            </div>
+          )}
+        </div>
 
-{NAV_ITEMS.map((item,idx)=>{
-const Icon=item.icon;
-return(
+        <ScrollArea className="flex-1 px-3 py-4">
+          <nav className="space-y-1.5">
+            {NAV_ITEMS.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  ref={index === 0 ? firstNavRef : null}
+                  onClick={() => handleNavigate(item.path)}
+                  className={({ isActive }) =>
+                    `group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-white text-slate-950 shadow-lg shadow-slate-950/10"
+                        : "text-slate-300 hover:bg-white/8 hover:text-white"
+                    } ${collapsed ? "justify-center" : ""}`
+                  }
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 transition group-hover:bg-white/10">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  {!collapsed && <span>{item.label}</span>}
+                </NavLink>
+              );
+            })}
+          </nav>
 
-<NavLink
-key={item.path}
-to={item.path}
-ref={idx===0?firstNavRef:null}
-onClick={()=>handleNavClick(item.path)}
-className={({isActive})=>
-`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
-isActive?"bg-indigo-50 text-indigo-700":"text-slate-700 hover:bg-slate-100"
-} ${collapsed?"justify-center":""}`
-}
->
+          <Separator className="my-5 bg-white/10" />
 
-<span className="flex items-center justify-center transition rounded-lg w-9 h-9 group-hover:bg-white">
-<Icon className="w-5 h-5"/>
-</span>
+          <div className={`space-y-2 ${collapsed ? "items-center" : ""}`}>
+            <Button
+              variant="ghost"
+              className={`w-full rounded-2xl text-slate-300 hover:bg-white/10 hover:text-white ${collapsed ? "px-0" : "justify-start"}`}
+              onClick={() => {
+                window.open("/docs", "_blank");
+                if (mobile) onClose?.();
+              }}
+            >
+              <BookOpen className="h-4 w-4" />
+              {!collapsed && <span>Documentation</span>}
+            </Button>
+          </div>
+        </ScrollArea>
 
-{!collapsed&&<span>{item.label}</span>}
+        <div className="border-t border-white/10 px-4 py-4">
+          <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
+            <Avatar className="h-10 w-10 border border-white/10">
+              <AvatarImage src="/avatar.png" />
+              <AvatarFallback className="bg-white/10 text-white">{initials}</AvatarFallback>
+            </Avatar>
 
-</NavLink>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-white">{fullName}</div>
+                <div className="truncate text-xs text-slate-400">{user?.email || ""}</div>
+              </div>
+            )}
 
-);
-})}
-
-</nav>
-
-<Separator className="my-5"/>
-
-<div className={`space-y-2 ${collapsed?"text-center":""}`}>
-
-{!collapsed&&(
-<Button
-className="justify-start w-full"
-onClick={()=>handleNavClick("/queries/new")}
->
-<Plus className="w-4 h-4 mr-2"/>
-New Query
-</Button>
-)}
-
-<Tooltip content="Help & documentation">
-<Button
-variant="ghost"
-size="icon"
-className="mx-auto"
-onClick={()=>{
-window.open("/docs","_blank");
-if(mobile)onClose?.();
-}}
->
-<HelpCircle className="w-4 h-4"/>
-</Button>
-</Tooltip>
-
-</div>
-
-</ScrollArea>
-
-{/* Profile */}
-<div className="px-4 py-4 border-t">
-
-<div className={`flex items-center gap-3 ${collapsed?"justify-center":""}`}>
-
-<Avatar className="w-9 h-9">
-<AvatarImage src="/avatar.png"/>
-<AvatarFallback>{initials}</AvatarFallback>
-</Avatar>
-
-{!collapsed&&(
-<div className="flex-1 min-w-0">
-<div className="text-sm font-semibold">{fullName}</div>
-<div className="text-xs truncate text-slate-500">{email}</div>
-</div>
-)}
-
-<Tooltip content="Account settings">
-<Button
-variant="ghost"
-size="icon"
-onClick={()=>handleNavClick("/settings")}
->
-<Settings className="w-4 h-4"/>
-</Button>
-</Tooltip>
-
-</div>
-
-</div>
-
-</aside>
-</>
-);
+            {!collapsed && (
+              <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={() => handleNavigate("/settings")}>
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </aside>
+    </>
+  );
 }
 
 export default React.memo(SidebarInner);
+
