@@ -18,7 +18,6 @@ import {
 
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { label: "Applications", path: "/applications", icon: Boxes },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
   { label: "Settings", path: "/settings", icon: Settings },
 ];
@@ -124,11 +123,11 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
           flex min-h-screen flex-col border-r border-white/60 bg-slate-950 text-slate-50 shadow-[0_0_40px_rgba(15,23,42,0.12)]
         `}
       >
-        <div className="border-b border-white/10 px-4 py-5">
+        <div className="px-4 py-5 border-b border-white/10">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-lg shadow-blue-900/30">
-                <div className="h-5 w-5 rounded-md bg-white/90" />
+              <div className="flex items-center justify-center w-12 h-12 shadow-lg rounded-2xl bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-blue-900/30">
+                <div className="w-5 h-5 rounded-md bg-white/90" />
               </div>
 
               {!collapsed && (
@@ -142,24 +141,24 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
             <div className="flex items-center gap-1">
               {!mobile && (
                 <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={() => setCollapsed((value) => !value)}>
-                  {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                  {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </Button>
               )}
 
               {mobile && (
                 <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={handleClose}>
-                  <X className="h-5 w-5" />
+                  <X className="w-5 h-5" />
                 </Button>
               )}
             </div>
           </div>
 
           {!collapsed && (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+            <div className="p-4 mt-5 text-sm border rounded-2xl border-white/10 bg-white/5 text-slate-300">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Quick action</div>
               <div className="mt-2 text-sm leading-6 text-slate-300">Create and connect a new application, then start tailing live logs instantly.</div>
-              <Button className="mt-4 w-full rounded-xl bg-white text-slate-950 hover:bg-slate-100" onClick={() => handleNavigate("/applications")}>
-                <Plus className="mr-2 h-4 w-4" />
+              <Button className="w-full mt-4 bg-white rounded-xl text-slate-950 hover:bg-slate-100" onClick={() => handleNavigate("/applications")}>
+                <Plus className="w-4 h-4 mr-2" />
                 Open Applications
               </Button>
             </div>
@@ -184,8 +183,8 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
                     } ${collapsed ? "justify-center" : ""}`
                   }
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 transition group-hover:bg-white/10">
-                    <Icon className="h-5 w-5" />
+                  <span className="flex items-center justify-center w-10 h-10 transition rounded-xl bg-white/5 group-hover:bg-white/10">
+                    <Icon className="w-5 h-5" />
                   </span>
                   {!collapsed && <span>{item.label}</span>}
                 </NavLink>
@@ -204,29 +203,29 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
                 if (mobile) onClose?.();
               }}
             >
-              <BookOpen className="h-4 w-4" />
+              <BookOpen className="w-4 h-4" />
               {!collapsed && <span>Documentation</span>}
             </Button>
           </div>
         </ScrollArea>
 
-        <div className="border-t border-white/10 px-4 py-4">
+        <div className="px-4 py-4 border-t border-white/10">
           <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
-            <Avatar className="h-10 w-10 border border-white/10">
+            <Avatar className="w-10 h-10 border border-white/10">
               <AvatarImage src="/avatar.png" />
-              <AvatarFallback className="bg-white/10 text-white">{initials}</AvatarFallback>
+              <AvatarFallback className="text-white bg-white/10">{initials}</AvatarFallback>
             </Avatar>
 
             {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-white">{fullName}</div>
-                <div className="truncate text-xs text-slate-400">{user?.email || ""}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-white truncate">{fullName}</div>
+                <div className="text-xs truncate text-slate-400">{user?.email || ""}</div>
               </div>
             )}
 
             {!collapsed && (
               <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={() => handleNavigate("/settings")}>
-                <Settings className="h-4 w-4" />
+                <Settings className="w-4 h-4" />
               </Button>
             )}
           </div>

@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { LogOut } from "lucide-react";
 
 /**
  * ConfirmLogoutModal
@@ -24,17 +25,13 @@ export default function ConfirmLogoutModal({
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent
-        className="
-          data-[state=open]:animate-in
-          data-[state=closed]:animate-out
-          data-[state=open]:fade-in-0
-          data-[state=closed]:fade-out-0
-          data-[state=open]:zoom-in-95
-          data-[state=closed]:zoom-out-95
-          duration-200
-        "
-      >
+      <AlertDialogContent>
+        <div className="px-6 pt-6 sm:px-8 sm:pt-8">
+          <div className="inline-flex rounded-2xl bg-slate-950 p-3 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
+            <LogOut className="h-5 w-5" />
+          </div>
+        </div>
+
         <AlertDialogHeader>
           <AlertDialogTitle>
             Confirm logout
@@ -47,13 +44,13 @@ export default function ConfirmLogoutModal({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>
+          <AlertDialogCancel className="rounded-2xl">
             Cancel
           </AlertDialogCancel>
 
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+            className="rounded-2xl bg-red-600 px-5 hover:bg-red-700 focus:ring-red-500"
           >
             Logout
           </AlertDialogAction>

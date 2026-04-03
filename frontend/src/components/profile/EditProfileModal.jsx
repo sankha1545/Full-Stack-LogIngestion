@@ -1,10 +1,9 @@
-// src/components/profile/EditProfileModal.jsx
-
-import React, { useEffect, useMemo, useRef } from "react";
+﻿import React, { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { PencilLine, Save, Sparkles } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import ProfileForm from "./ProfileForm";
 import useUnsavedChanges from "./useUnsavedChanges";
 
@@ -23,10 +22,6 @@ export default function EditProfileModal({
 }) {
   const dialogRef = useRef(null);
   const previouslyFocused = useRef(null);
-
-  /* =====================================================
-     DETECT UNSAVED CHANGES
-  ===================================================== */
 
   const hasChanges = useMemo(() => {
     const a = {
@@ -50,10 +45,6 @@ export default function EditProfileModal({
 
   const { confirmDiscard } = useUnsavedChanges(hasChanges);
 
-  /* =====================================================
-     LOCK BODY SCROLL
-  ===================================================== */
-
   useEffect(() => {
     if (open) {
       previouslyFocused.current = document.activeElement;
@@ -69,15 +60,11 @@ export default function EditProfileModal({
     };
   }, [open]);
 
-  /* =====================================================
-     ESC CLOSE
-  ===================================================== */
-
   useEffect(() => {
     if (!open) return;
 
-    const onKey = (e) => {
-      if (e.key === "Escape") {
+    const onKey = (event) => {
+      if (event.key === "Escape") {
         if (!confirmDiscard()) return;
         onOpenChange(false);
       }
@@ -87,31 +74,22 @@ export default function EditProfileModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, confirmDiscard, onOpenChange]);
 
-  /* =====================================================
-     BASIC FOCUS TRAP
-  ===================================================== */
-
   useEffect(() => {
     if (!open) return;
 
-    const handleFocus = (e) => {
+    const handleFocus = (event) => {
       if (!dialogRef.current) return;
-      if (!dialogRef.current.contains(e.target)) {
-        e.stopPropagation();
+      if (!dialogRef.current.contains(event.target)) {
+        event.stopPropagation();
         dialogRef.current.focus();
       }
     };
 
     document.addEventListener("focus", handleFocus, true);
-    return () =>
-      document.removeEventListener("focus", handleFocus, true);
+    return () => document.removeEventListener("focus", handleFocus, true);
   }, [open]);
 
   if (typeof document === "undefined") return null;
-
-  /* =====================================================
-     SAVE HANDLER (FIXED)
-  ===================================================== */
 
   const handleSaveClick = async () => {
     if (!hasChanges) {
@@ -121,19 +99,12 @@ export default function EditProfileModal({
 
     try {
       await onSave();
-
-      // guaranteed UX flow
       toast.success("Your profile saved successfully");
-
       onOpenChange(false);
     } catch (err) {
       toast.error(err?.message || "Failed to save profile");
     }
   };
-
-  /* =====================================================
-     UI
-  ===================================================== */
 
   const content = (
     <div
@@ -144,77 +115,88 @@ export default function EditProfileModal({
       ref={dialogRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-      {/* overlay */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-950/72 backdrop-blur-md"
         onMouseDown={() => {
           if (!confirmDiscard()) return;
           onOpenChange(false);
         }}
       />
 
-      {/* panel */}
       <div
-        className="relative z-10 w-full max-w-2xl p-6 bg-white rounded-lg shadow-lg dark:bg-slate-900"
-        onMouseDown={(e) => e.stopPropagation()}
+        className="relative z-10 w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,251,255,0.97))] shadow-[0_40px_120px_rgba(15,23,42,0.24)]"
+        onMouseDown={(event) => event.stopPropagation()}
       >
-        {/* header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Edit profile
-            </h3>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Update your personal information. Email cannot be changed here.
+        <div className="grid lg:grid-cols-[0.92fr_1.08fr]">
+          <div className="bg-slate-950 px-6 py-8 text-white sm:px-8">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
+              <Sparkles className="h-3.5 w-3.5" />
+              Profile editing
+            </div>
+            <h3 className="mt-5 text-2xl font-semibold tracking-tight">Make profile changes in a modal that actually feels special.</h3>
+            <p className="mt-3 text-sm leading-7 text-slate-300">
+              Cleaner layout, stronger hierarchy, and safer dismiss behavior give this workflow a much more polished feel.
             </p>
+            <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-300">
+              Unsaved changes are protected, and updates stay in clear view while you edit.
+            </div>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              if (!confirmDiscard()) return;
-              onOpenChange(false);
-            }}
-            aria-label="Close"
-          >
-            ✕
-          </Button>
-        </div>
+          <div className="px-6 py-8 sm:px-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="inline-flex rounded-2xl bg-sky-50 p-3 text-sky-700 shadow-sm">
+                  <PencilLine className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 text-xl font-semibold text-slate-950">Edit profile</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  Update your personal information. Email cannot be changed here.
+                </p>
+              </div>
 
-        {/* form */}
-        <div className="mt-5">
-          <ProfileForm
-            values={form}
-            onChange={(k, v) =>
-              setForm((prev) => ({ ...prev, [k]: v }))
-            }
-            countries={countries}
-            states={states}
-            loadingCountries={loadingCountries}
-            loadingStates={loadingStates}
-          />
-        </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-2xl"
+                onClick={() => {
+                  if (!confirmDiscard()) return;
+                  onOpenChange(false);
+                }}
+                aria-label="Close"
+              >
+                ×
+              </Button>
+            </div>
 
-        {/* footer */}
-        <div className="flex items-center justify-end gap-3 mt-6">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              if (!confirmDiscard()) return;
-              onOpenChange(false);
-            }}
-          >
-            Cancel
-          </Button>
+            <div className="mt-6">
+              <ProfileForm
+                values={form}
+                onChange={(key, value) => setForm((prev) => ({ ...prev, [key]: value }))}
+                countries={countries}
+                states={states}
+                loadingCountries={loadingCountries}
+                loadingStates={loadingStates}
+              />
+            </div>
 
-          <Button
-            onClick={handleSaveClick}
-            disabled={saving || !hasChanges}
-          >
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                className="rounded-2xl"
+                onClick={() => {
+                  if (!confirmDiscard()) return;
+                  onOpenChange(false);
+                }}
+              >
+                Cancel
+              </Button>
+
+              <Button className="rounded-2xl px-5" onClick={handleSaveClick} disabled={saving || !hasChanges}>
+                {saving ? "Saving..." : "Save changes"}
+                {!saving && <Save className="ml-2 h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
