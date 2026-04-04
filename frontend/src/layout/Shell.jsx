@@ -1,9 +1,8 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
-import WebCLI from "../components/WebCLI/WebCLI";
 
 export default function Shell({ children }) {
-  const [open, setOpen] = useState(false);
+  const [_open, _setOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
@@ -14,9 +13,6 @@ export default function Shell({ children }) {
           <h1 className="font-bold">LogScope</h1>
         
         </header>
-
-        <WebCLI open={open} onClose={() => setOpen(false)} />
-
         <main className="flex-1 p-6 overflow-y-auto">{children}</main>
       </div>
     </div>

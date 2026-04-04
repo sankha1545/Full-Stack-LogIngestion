@@ -1,7 +1,6 @@
 // src/components/landingpage/ContactForm.jsx
 import React, { useEffect, useState } from "react";
 import CountryStateSelect from "./CountryStateSelect";
-import DialCodeSelect from "./DialCodeSelect";
 import { fetchCountries } from "@/api/geodata";
 
 /**
@@ -114,6 +113,7 @@ export default function ContactForm({ onSuccess }) {
     <div className="p-6 border shadow-xl bg-slate-900/60 border-slate-800 rounded-2xl">
       <h2 className="mb-1 text-xl font-semibold text-white">Please enter your information</h2>
       <p className="mb-4 text-sm text-slate-300">Required fields marked *</p>
+      {countriesError && <div className="mb-4 text-sm text-amber-400">{countriesError}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* name row */}

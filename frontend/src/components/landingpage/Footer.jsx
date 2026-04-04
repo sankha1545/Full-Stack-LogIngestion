@@ -49,7 +49,7 @@ export default function Footer() {
       }
       setStatus("ok");
       setEmail("");
-    } catch (err) {
+    } catch {
       setStatus("error");
     }
   }

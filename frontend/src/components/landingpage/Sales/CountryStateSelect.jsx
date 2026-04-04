@@ -31,7 +31,7 @@ export default function CountryStateSelect({
         if (!mounted) return;
         setCountries(list);
       })
-      .catch((err) => {
+      .catch(() => {
         setCountriesError("Unable to load countries");
       })
       .finally(() => mounted && setLoadingCountries(false));

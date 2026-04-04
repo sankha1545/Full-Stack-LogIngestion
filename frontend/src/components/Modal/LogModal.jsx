@@ -20,7 +20,9 @@ export default function LogModal({ log, onClose }) {
   async function copyValue(value) {
     try {
       await navigator.clipboard.writeText(String(value || ""));
-    } catch {}
+    } catch (error) {
+      console.error("Failed to copy log value", error);
+    }
   }
 
   return (

@@ -9,7 +9,7 @@ export async function fetchCountries() {
     if (cached && Date.now() - cached._fetchedAt < CACHE_TTL_MS) {
       return cached.countries;
     }
-  } catch (err) {
+  } catch {
     // ignore cache read errors
   }
 
@@ -54,7 +54,7 @@ export async function fetchCountries() {
 
   try {
     localStorage.setItem(COUNTRIES_CACHE_KEY, JSON.stringify({ _fetchedAt: Date.now(), countries }));
-  } catch (err) {
+  } catch {
     // ignore
   }
 
@@ -80,7 +80,7 @@ export async function fetchStates(countryName) {
     const states = payload.data.states.map((s) => (typeof s === "string" ? s : s.name)).filter(Boolean);
     states.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
     return states;
-  } catch (err) {
+  } catch {
     // network/CORS
     return [];
   }

@@ -49,7 +49,9 @@ async function handleResponse(res) {
 
     data = await res.json();
 
-  } catch {}
+  } catch {
+    data = null;
+  }
 
   if (res.ok) {
 

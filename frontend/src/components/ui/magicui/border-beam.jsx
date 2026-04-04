@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 
 export function BorderBeam({
   className,
-  size = 300,
   duration = 10,
 }) {
   return (

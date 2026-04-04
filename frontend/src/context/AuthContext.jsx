@@ -124,7 +124,9 @@ export function AuthProvider({ children }) {
         method: "POST",
         credentials: "include",
       });
-    } catch {}
+    } catch (error) {
+      log("Logout request failed:", error);
+    }
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -149,7 +151,8 @@ export function AuthProvider({ children }) {
         log("Token expired → logout");
         logout();
       }
-    } catch {
+    } catch (error) {
+      log("Token parsing failed, logging out:", error);
       logout();
     }
   }, [token, logout]);

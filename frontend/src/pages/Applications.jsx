@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getApps, createApp, deleteApp, rotateApiKey } from "../api/appsApi";
-import CreateAppModal from "../components/modal/CreateAppModal";
+import CreateAppModal from "../components/Modal/CreateAppModal";
 import AppCard from "../components/apps/AppCard";
 import { useNavigate } from "react-router-dom";
 

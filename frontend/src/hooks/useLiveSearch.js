@@ -76,8 +76,10 @@ export default function useLiveSearch({
 
      }
 
-     catch {
-
+     catch (error) {
+       if (error?.name !== "AbortError") {
+         console.error("Live search failed", error);
+       }
      }
 
      finally {

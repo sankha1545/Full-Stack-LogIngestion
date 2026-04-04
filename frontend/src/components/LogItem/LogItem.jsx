@@ -17,7 +17,9 @@ export default function LogItem({ log, onClick }) {
   async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text);
-    } catch {}
+    } catch (error) {
+      console.error("Failed to copy log text", error);
+    }
   }
 
   function shareLog() {
