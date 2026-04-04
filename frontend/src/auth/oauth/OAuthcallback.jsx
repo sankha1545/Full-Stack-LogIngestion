@@ -17,7 +17,6 @@ export default function OAuthCallback() {
     const mfaRequired = params.get("mfaRequired");
     const tempToken = params.get("tempToken");
 
-    /* ================= NORMAL LOGIN ================= */
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
@@ -31,16 +30,14 @@ export default function OAuthCallback() {
         clearTempMfaSession();
         login(token, userData);
 
-        toast.success("Login successful 🎉");
+        toast.success("Login successful");
         navigate("/dashboard", { replace: true });
         return;
-
       } catch (err) {
         console.error("Token decode failed:", err);
       }
     }
 
-    /* ================= MFA REQUIRED ================= */
     if (mfaRequired === "true" && tempToken) {
       setTempMfaSession({
         tempToken,
@@ -48,24 +45,20 @@ export default function OAuthCallback() {
       });
 
       toast("Multi-factor authentication required", {
-        icon: "🔐",
+        icon: "!",
       });
 
       navigate("/mfa-verify", { replace: true });
       return;
     }
 
-    /* ================= FAILURE ================= */
     toast.error("Authentication failed");
     navigate("/login", { replace: true });
-
   }, [params, login, navigate, setTempMfaSession, clearTempMfaSession]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-black">
-      <div className="text-sm text-white/60 animate-pulse">
-        Completing authentication…
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="animate-pulse text-sm text-white/60">Completing authentication...</div>
     </div>
   );
 }
