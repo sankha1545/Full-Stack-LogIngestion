@@ -50,13 +50,13 @@ export default function LogChart({ logs = [] }) {
     <div className="space-y-8">
       <section>
         <div className="mb-3">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Volume trend</h3>
-          <p className="mt-1 text-sm text-slate-500">Animated line chart for log flow through the day.</p>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Volume trend</h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Animated line chart for log flow through the day.</p>
         </div>
 
-        <div className="h-[260px] w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="h-[260px] w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/80">
           {total === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">No data</div>
+            <div className="flex h-full items-center justify-center text-sm text-slate-400 dark:text-slate-500">No data</div>
           ) : (
             <ResponsiveContainer>
               <LineChart data={timeSeries}>
@@ -81,13 +81,13 @@ export default function LogChart({ logs = [] }) {
 
       <section>
         <div className="mb-3">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Severity mix</h3>
-          <p className="mt-1 text-sm text-slate-500">Animated bars with clearer color coding for each level.</p>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Severity mix</h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Animated bars with clearer color coding for each level.</p>
         </div>
 
-        <div className="h-[260px] w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="h-[260px] w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/80">
           {total === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">No logs</div>
+            <div className="flex h-full items-center justify-center text-sm text-slate-400 dark:text-slate-500">No logs</div>
           ) : (
             <ResponsiveContainer>
               <BarChart data={distribution}>

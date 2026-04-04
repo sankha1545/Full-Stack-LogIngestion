@@ -113,17 +113,17 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
 
   return (
     <>
-      {mobile && open && <div className="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm" onClick={handleClose} />}
+      {mobile && open && <div className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm" onClick={handleClose} />}
 
       <aside
         className={`
           ${mobile ? "fixed left-0 top-0 z-[100] h-full transform transition-transform duration-300" : "sticky top-0"}
           ${mobile ? (open ? "translate-x-0" : "-translate-x-full") : ""}
           ${collapsed && !mobile ? "w-[94px]" : "w-80"}
-          flex min-h-screen flex-col border-r border-white/60 bg-slate-950 text-slate-50 shadow-[0_0_40px_rgba(15,23,42,0.12)]
+          flex min-h-screen flex-col border-r border-slate-200/80 bg-white/95 text-slate-900 shadow-[0_0_40px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950 dark:text-slate-50 dark:shadow-[0_0_40px_rgba(15,23,42,0.12)]
         `}
       >
-        <div className="px-4 py-5 border-b border-white/10">
+        <div className="border-b border-slate-200 px-4 py-5 dark:border-white/10">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-12 h-12 shadow-lg rounded-2xl bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-blue-900/30">
@@ -132,21 +132,21 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
 
               {!collapsed && (
                 <div>
-                  <div className="text-lg font-semibold tracking-tight">LogScope</div>
-                  <div className="text-xs text-slate-400">Advanced monitoring workspace</div>
+                  <div className="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">LogScope</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Advanced monitoring workspace</div>
                 </div>
               )}
             </div>
 
             <div className="flex items-center gap-1">
               {!mobile && (
-                <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={() => setCollapsed((value) => !value)}>
+                <Button variant="ghost" size="icon" className="rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={() => setCollapsed((value) => !value)}>
                   {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </Button>
               )}
 
               {mobile && (
-                <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={handleClose}>
+                <Button variant="ghost" size="icon" className="rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={handleClose}>
                   <X className="w-5 h-5" />
                 </Button>
               )}
@@ -154,10 +154,10 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
           </div>
 
           {!collapsed && (
-            <div className="p-4 mt-5 text-sm border rounded-2xl border-white/10 bg-white/5 text-slate-300">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Quick action</div>
-              <div className="mt-2 text-sm leading-6 text-slate-300">Create and connect a new application, then start tailing live logs instantly.</div>
-              <Button className="w-full mt-4 bg-white rounded-xl text-slate-950 hover:bg-slate-100" onClick={() => handleNavigate("/applications")}>
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-300">Quick action</div>
+              <div className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Create and connect a new application, then start tailing live logs instantly.</div>
+              <Button className="mt-4 w-full rounded-xl" onClick={() => handleNavigate("/applications")}>
                 <Plus className="w-4 h-4 mr-2" />
                 Open Applications
               </Button>
@@ -166,7 +166,7 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
         </div>
 
         <ScrollArea className="flex-1 px-3 py-4">
-          <nav className="space-y-1.5">
+          <nav className="space-y-1">
             {NAV_ITEMS.map((item, index) => {
               const Icon = item.icon;
               return (
@@ -176,14 +176,14 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
                   ref={index === 0 ? firstNavRef : null}
                   onClick={() => handleNavigate(item.path)}
                   className={({ isActive }) =>
-                    `group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
+                    `group relative flex items-center gap-3 rounded-xl border-l-2 px-3 py-3 text-sm font-medium transition-all ${
                       isActive
-                        ? "bg-white text-slate-950 shadow-lg shadow-slate-950/10"
-                        : "text-slate-300 hover:bg-white/8 hover:text-white"
+                        ? "border-sky-500 bg-sky-50/80 text-slate-950 dark:bg-slate-900/80 dark:text-white"
+                        : "border-transparent text-slate-500 hover:border-slate-300 hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:bg-slate-900/60 dark:hover:text-slate-100"
                     } ${collapsed ? "justify-center" : ""}`
                   }
                 >
-                  <span className="flex items-center justify-center w-10 h-10 transition rounded-xl bg-white/5 group-hover:bg-white/10">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition group-hover:bg-slate-200 group-hover:text-slate-900 dark:bg-slate-900 dark:text-slate-400 dark:group-hover:bg-slate-800 dark:group-hover:text-slate-100">
                     <Icon className="w-5 h-5" />
                   </span>
                   {!collapsed && <span>{item.label}</span>}
@@ -192,12 +192,12 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
             })}
           </nav>
 
-          <Separator className="my-5 bg-white/10" />
+          <Separator className="my-5 bg-slate-200 dark:bg-white/10" />
 
           <div className={`space-y-2 ${collapsed ? "items-center" : ""}`}>
             <Button
               variant="ghost"
-              className={`w-full rounded-2xl text-slate-300 hover:bg-white/10 hover:text-white ${collapsed ? "px-0" : "justify-start"}`}
+              className={`w-full rounded-xl border-l-2 border-transparent text-slate-500 hover:border-slate-300 hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:bg-slate-900/60 dark:hover:text-slate-100 ${collapsed ? "px-0 justify-center" : "justify-start px-3"}`}
               onClick={() => {
                 window.open("/docs", "_blank");
                 if (mobile) onClose?.();
@@ -209,22 +209,22 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
           </div>
         </ScrollArea>
 
-        <div className="px-4 py-4 border-t border-white/10">
+        <div className="border-t border-slate-200 px-4 py-4 dark:border-white/10">
           <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
-            <Avatar className="w-10 h-10 border border-white/10">
+            <Avatar className="h-10 w-10 border border-slate-200 dark:border-white/10">
               <AvatarImage src="/avatar.png" />
-              <AvatarFallback className="text-white bg-white/10">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-slate-100 text-slate-950 dark:bg-white/10 dark:text-white">{initials}</AvatarFallback>
             </Avatar>
 
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-white truncate">{fullName}</div>
-                <div className="text-xs truncate text-slate-400">{user?.email || ""}</div>
+                <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">{fullName}</div>
+                <div className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.email || ""}</div>
               </div>
             )}
 
             {!collapsed && (
-              <Button variant="ghost" size="icon" className="rounded-xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={() => handleNavigate("/settings")}>
+              <Button variant="ghost" size="icon" className="rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={() => handleNavigate("/settings")}>
                 <Settings className="w-4 h-4" />
               </Button>
             )}
@@ -236,4 +236,3 @@ function SidebarInner({ mobile = false, open = false, onClose }) {
 }
 
 export default React.memo(SidebarInner);
-

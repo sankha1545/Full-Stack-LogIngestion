@@ -1,3 +1,5 @@
+import { emitServerReachable, emitServerUnreachable } from "@/utils/appStatusEvents";
+
 const BASE_URL = "http://localhost:3001/api";
 
 
@@ -51,6 +53,7 @@ async function handleResponse(res) {
 
   if (res.ok) {
 
+    emitServerReachable();
     return data;
 
   }
@@ -201,6 +204,8 @@ export async function fetchLogs(filters = {}, signal) {
       err.message =
 
         "Network error: Unable to reach LogScope server";
+
+      emitServerUnreachable(err.message);
 
     }
 

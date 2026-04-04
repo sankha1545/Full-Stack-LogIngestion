@@ -174,16 +174,16 @@ export default function Analytics() {
         <KpiCard label="Event types" value={byKind.length} icon={BarChart3} color="bg-indigo-50 text-indigo-700" />
       </section>
 
-      <Card className="rounded-[28px] border-slate-200 shadow-sm">
+      <Card className="rounded-[28px] border-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-950/80">
         <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-xl">Log volume over time</CardTitle>
-            <p className="text-sm text-slate-500">Animated trend lines make growth and spikes easier to read.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Animated trend lines make growth and spikes easier to read.</p>
           </div>
 
           <div className="flex flex-col gap-3 sm:items-end">
             <Tabs value={mode} onValueChange={setMode}>
-              <TabsList className="rounded-2xl bg-slate-100 p-1">
+              <TabsList className="rounded-2xl bg-slate-100 p-1 dark:bg-slate-900">
                 <TabsTrigger value="daily" className="rounded-xl">Daily</TabsTrigger>
                 <TabsTrigger value="monthly" className="rounded-xl">Monthly</TabsTrigger>
                 <TabsTrigger value="yearly" className="rounded-xl">Yearly</TabsTrigger>
@@ -300,13 +300,13 @@ export default function Analytics() {
 
 const KpiCard = React.memo(function KpiCard({ label, value, icon: Icon, color }) {
   return (
-    <Card className="rounded-[24px] border-slate-200 shadow-sm">
+    <Card className="rounded-[24px] border-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-950/80">
       <CardContent className="pt-6">
         <div className={`inline-flex rounded-2xl p-3 ${color}`}>
           <Icon className="h-5 w-5" />
         </div>
-        <div className="mt-4 text-sm text-slate-500">{label}</div>
-        <div className="mt-1 text-3xl font-semibold text-slate-950">{value}</div>
+        <div className="mt-4 text-sm text-slate-500 dark:text-slate-400">{label}</div>
+        <div className="mt-1 text-3xl font-semibold text-slate-950 dark:text-slate-100">{value}</div>
       </CardContent>
     </Card>
   );
@@ -314,10 +314,10 @@ const KpiCard = React.memo(function KpiCard({ label, value, icon: Icon, color })
 
 function ChartCard({ title, subtitle, children }) {
   return (
-    <Card className="rounded-[28px] border-slate-200 shadow-sm">
+    <Card className="rounded-[28px] border-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-950/80">
       <CardHeader>
         <CardTitle className="text-xl">{title}</CardTitle>
-        <p className="text-sm text-slate-500">{subtitle}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full">
@@ -329,5 +329,5 @@ function ChartCard({ title, subtitle, children }) {
 }
 
 function EmptyState({ text }) {
-  return <div className="py-24 text-center text-slate-500">{text}</div>;
+  return <div className="py-24 text-center text-slate-500 dark:text-slate-400">{text}</div>;
 }

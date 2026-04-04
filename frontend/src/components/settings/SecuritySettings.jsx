@@ -7,8 +7,8 @@ export default function SecuritySettings() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Security</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Security</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
           A cleaner security workspace for password changes, MFA controls, and account protection.
         </p>
       </div>
@@ -38,12 +38,12 @@ export default function SecuritySettings() {
 
 function SecurityCard({ icon: Icon, title, text }) {
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-      <div className="inline-flex rounded-2xl bg-white p-3 text-sky-600 shadow-sm">
+    <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
+      <div className="inline-flex rounded-2xl bg-white p-3 text-sky-600 shadow-sm dark:bg-slate-800 dark:text-sky-300 dark:shadow-none">
         <Icon className="h-5 w-5" />
       </div>
-      <div className="mt-4 text-lg font-semibold text-slate-950">{title}</div>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+      <div className="mt-4 text-lg font-semibold text-slate-950 dark:text-slate-100">{title}</div>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{text}</p>
     </div>
   );
 }

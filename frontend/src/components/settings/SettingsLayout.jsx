@@ -21,7 +21,7 @@ export default function SettingsLayout() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:shadow-[0_30px_80px_rgba(2,6,23,0.42)]">
         <div className="grid gap-6 p-8 lg:grid-cols-[1.2fr_0.8fr] lg:p-10">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
@@ -53,7 +53,7 @@ export default function SettingsLayout() {
           <SettingsSidebar />
         </div>
 
-        <Card className="rounded-[28px] border-slate-200 shadow-sm">
+        <Card className="rounded-[28px] border-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-950/80">
           <CardContent className="p-6 md:p-8">
             <Outlet />
           </CardContent>

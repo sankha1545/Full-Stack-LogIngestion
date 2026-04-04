@@ -1,12 +1,39 @@
-# React + Vite
+# Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This frontend is a React + Vite application that powers the LogScope SaaS-style observability UI.
 
-Currently, two official plugins are available:
+## Main areas
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Authentication, signup, OAuth callback, and MFA
+- Dashboard and analytics
+- Applications workspace and live log detail pages
+- Settings, profile, security, notifications, and appearance
+- Shared modal, card, dialog, and navigation systems
+- App-wide dark/light theme support
 
-## Expanding the ESLint configuration
+## Important files
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `src/main.jsx`: app bootstrap and providers
+- `src/App.jsx`: authenticated shell
+- `src/context/AuthContext.jsx`: auth state
+- `src/context/ThemeContext.jsx`: app-wide theme state
+- `src/pages/`: top-level routes
+- `src/components/`: reusable feature and UI components
+- `src/hooks/useLogs.js`: live log fetching and subscription logic
+- `src/services/socket.js`: Socket.IO client
+- `src/index.css`: design tokens and shared global styling
+
+## Commands
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+```
+
+## Notes
+
+- The app uses Tailwind-based styling with shared CSS variables for theme support
+- Production builds are served through Nginx in the Docker image
+- The frontend expects the backend API and Socket.IO server to be reachable from the configured environment

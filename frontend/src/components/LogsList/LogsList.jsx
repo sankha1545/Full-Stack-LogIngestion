@@ -31,21 +31,21 @@ export default function LogsList({ logs = [], loading = false }) {
   const goNext = useCallback(() => setPage((value) => Math.min(totalPages, value + 1)), [totalPages]);
 
   if (loading) {
-    return <div className="rounded-[24px] border border-dashed border-slate-200 p-10 text-center text-slate-500">Loading logs...</div>;
+    return <div className="rounded-[24px] border border-dashed border-slate-200 p-10 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">Loading logs...</div>;
   }
 
   if (safeLogs.length === 0) {
-    return <div className="rounded-[24px] border border-dashed border-slate-200 p-10 text-center text-slate-500">No logs found</div>;
+    return <div className="rounded-[24px] border border-dashed border-slate-200 p-10 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">No logs found</div>;
   }
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="text-sm text-slate-600">
-          Showing <span className="font-semibold text-slate-950">{paginatedLogs.length}</span> of <span className="font-semibold text-slate-950">{safeLogs.length}</span> logs
+      <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 lg:flex-row lg:items-center lg:justify-between dark:border-slate-700 dark:bg-slate-900">
+        <div className="text-sm text-slate-600 dark:text-slate-400">
+          Showing <span className="font-semibold text-slate-950 dark:text-slate-100">{paginatedLogs.length}</span> of <span className="font-semibold text-slate-950 dark:text-slate-100">{safeLogs.length}</span> logs
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
           <div className="flex items-center gap-2">
             <span>Per page</span>
             <select
@@ -54,7 +54,7 @@ export default function LogsList({ logs = [], loading = false }) {
                 setPerPage(Number(event.target.value));
                 setPage(1);
               }}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             >
               {LOGS_PER_PAGE_OPTIONS.map((count) => (
                 <option key={count} value={count}>{count}</option>
@@ -62,7 +62,7 @@ export default function LogsList({ logs = [], loading = false }) {
             </select>
           </div>
 
-          <div className="rounded-full bg-white px-3 py-2 text-xs font-medium text-slate-600">
+          <div className="rounded-full bg-white px-3 py-2 text-xs font-medium text-slate-600 dark:bg-slate-950 dark:text-slate-300">
             Page {safePage} of {totalPages}
           </div>
         </div>
@@ -83,13 +83,13 @@ export default function LogsList({ logs = [], loading = false }) {
         </motion.div>
       </AnimatePresence>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
         <div className="flex items-center gap-2">
           <PagerButton onClick={goFirst} disabled={safePage === 1}><ChevronsLeft className="h-4 w-4" /></PagerButton>
           <PagerButton onClick={goPrev} disabled={safePage === 1}><ChevronLeft className="h-4 w-4" /> Prev</PagerButton>
         </div>
 
-        <div className="text-sm text-slate-600">Page <span className="font-semibold text-slate-950">{safePage}</span> of <span className="font-semibold text-slate-950">{totalPages}</span></div>
+        <div className="text-sm text-slate-600 dark:text-slate-400">Page <span className="font-semibold text-slate-950 dark:text-slate-100">{safePage}</span> of <span className="font-semibold text-slate-950 dark:text-slate-100">{totalPages}</span></div>
 
         <div className="flex items-center gap-2">
           <PagerButton onClick={goNext} disabled={safePage === totalPages}>Next <ChevronRight className="h-4 w-4" /></PagerButton>
@@ -106,7 +106,7 @@ function PagerButton({ children, ...props }) {
   return (
     <button
       {...props}
-      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40"
+      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
     >
       {children}
     </button>

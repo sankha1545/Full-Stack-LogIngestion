@@ -113,24 +113,24 @@ export default function ProfileSettings() {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-sm">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-950 dark:to-slate-900 dark:shadow-[0_24px_60px_rgba(2,6,23,0.35)]">
         <CardContent className="flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-5">
             <div className="rounded-full bg-gradient-to-br from-sky-500 to-blue-600 p-1.5 shadow-lg shadow-sky-100">
-              <Avatar className="h-20 w-20 border-4 border-white">
+              <Avatar className="h-20 w-20 border-4 border-white dark:border-slate-900">
                 <AvatarImage src="/avatar.png" />
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
             </div>
 
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+              <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-200">
                 <Sparkles className="h-3.5 w-3.5" />
                 Account profile
               </div>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{fullName}</h2>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{fullName}</h2>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="gap-1 rounded-full bg-emerald-50 text-emerald-700">
+                <Badge variant="secondary" className="gap-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
                   <ShieldCheck className="h-3 w-3" />
                   Verified user
                 </Badge>
@@ -145,7 +145,7 @@ export default function ProfileSettings() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="rounded-[28px] border-slate-200 shadow-sm">
+        <Card className="rounded-[28px] border-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-950/80">
           <CardHeader>
             <CardTitle>Account information</CardTitle>
             <CardDescription>Your core identity details in a cleaner summary layout.</CardDescription>
@@ -157,7 +157,7 @@ export default function ProfileSettings() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-slate-200 shadow-sm">
+        <Card className="rounded-[28px] border-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-950/80">
           <CardHeader>
             <CardTitle>Profile status</CardTitle>
             <CardDescription>Quick account signals users expect in a standard settings page.</CardDescription>
@@ -189,29 +189,29 @@ export default function ProfileSettings() {
 
 function InfoRow({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <div className="flex items-center gap-3 text-slate-600">
-        <div className="rounded-xl bg-white p-2 shadow-sm">
+    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+        <div className="rounded-xl bg-white p-2 shadow-sm dark:bg-slate-800 dark:shadow-none">
           <Icon className="h-4 w-4" />
         </div>
         <span>{label}</span>
       </div>
-      <div className="font-medium text-slate-950">{value}</div>
+      <div className="font-medium text-slate-950 dark:text-slate-100">{value}</div>
     </div>
   );
 }
 
 function StatusRow({ label, value, tone }) {
   const tones = {
-    emerald: "bg-emerald-50 text-emerald-700",
-    sky: "bg-sky-50 text-sky-700",
-    amber: "bg-amber-50 text-amber-700",
-    slate: "bg-slate-100 text-slate-700",
+    emerald: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200",
+    sky: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200",
+    amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
+    slate: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
   };
 
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3">
-      <span className="text-slate-600">{label}</span>
+    <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 dark:border-slate-700">
+      <span className="text-slate-600 dark:text-slate-300">{label}</span>
       <span className={`rounded-full px-3 py-1 text-xs font-medium ${tones[tone]}`}>{value}</span>
     </div>
   );

@@ -1,13 +1,13 @@
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function ThemeToggle({ theme, setTheme }) {
+export default function ThemeToggle({ theme, toggleTheme }) {
   return (
     <Button
       variant="outline"
-      size="sm"
-      className="gap-2"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      size="default"
+      className="h-11 gap-2 rounded-2xl px-4"
+      onClick={toggleTheme}
     >
       {theme === "dark" ? (
         <>

@@ -88,50 +88,50 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen text-slate-900">
+    <div className="flex min-h-screen bg-transparent text-slate-900 transition-colors dark:text-slate-100">
       <div className="hidden lg:block">
         <Sidebar />
       </div>
 
       <div className="relative flex min-h-screen flex-1 flex-col">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_32%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_32%)] dark:bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_28%)]" />
 
-        <header className="sticky top-0 z-40 border-b border-white/70 bg-white/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-40 border-b border-white/70 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/80">
           <div className="mx-auto flex h-20 w-full max-w-[1600px] items-center gap-4 px-4 sm:px-6 lg:px-8">
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-2xl border border-slate-200 bg-white lg:hidden"
+              className="rounded-2xl border border-slate-200 bg-white lg:hidden dark:border-slate-700 dark:bg-slate-900"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </Button>
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-600">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300">
                 <Sparkles className="h-3.5 w-3.5" />
                 Observability Workspace
               </div>
               <div className="mt-1 flex flex-col gap-0.5">
-                <h1 className="truncate text-xl font-semibold tracking-tight text-slate-950">{currentMeta.title}</h1>
-                <p className="truncate text-sm text-slate-500">{currentMeta.subtitle}</p>
+                <h1 className="truncate text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{currentMeta.title}</h1>
+                <p className="truncate text-sm text-slate-500 dark:text-slate-400">{currentMeta.subtitle}</p>
               </div>
             </div>
 
-            <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 shadow-sm sm:flex">
-              <BellDot className="h-4 w-4 text-sky-600" />
+            <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 shadow-sm sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+              <BellDot className="h-4 w-4 text-sky-600 dark:text-sky-300" />
               Live system updates enabled
             </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-11 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm">
+                <Button variant="ghost" className="h-11 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                   <User className="h-4 w-4" />
                   <span className="max-w-[180px] truncate">{user?.email || "Account"}</span>
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-56 rounded-2xl border-slate-200 p-2">
+              <DropdownMenuContent align="end" className="w-56 rounded-2xl border-slate-200 p-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
                 <DropdownMenuItem onClick={() => navigate("/settings")} className="rounded-xl">
                   <Settings className="mr-2 h-4 w-4" />
                   Profile settings

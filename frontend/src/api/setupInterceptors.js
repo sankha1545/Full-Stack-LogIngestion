@@ -1,4 +1,6 @@
 
+import { emitServerReachable, emitServerUnreachable } from "@/utils/appStatusEvents";
+
 export function setupInterceptors(api, setLoading) {
   if (!api || typeof api.interceptors === "undefined") {
     console.warn("setupInterceptors: invalid axios instance");
@@ -29,12 +31,16 @@ export function setupInterceptors(api, setLoading) {
       try {
         if (typeof setLoading === "function") setLoading(false);
       } catch (e) {}
+      emitServerReachable();
       return response;
     },
     (error) => {
       try {
         if (typeof setLoading === "function") setLoading(false);
       } catch (e) {}
+      if (!error?.response || error?.code === "ERR_NETWORK" || error?.message === "Network Error") {
+        emitServerUnreachable("Unable to reach the LogScope server. Check your connection or backend service.");
+      }
       return Promise.reject(error);
     }
   );

@@ -26,8 +26,6 @@ export default function FilterBar({ filters, setFilters }) {
   const [dateError, setDateError] = useState("");
   const debounceRef = useRef(null);
 
-  /* ---------- Helpers ---------- */
-
   function isoToInput(iso) {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "";
@@ -57,8 +55,6 @@ export default function FilterBar({ filters, setFilters }) {
     return true;
   }
 
-  /* ---------- Quick Filters ---------- */
-
   function applyQuick(q) {
     setActiveQuick(q?.label || null);
 
@@ -76,8 +72,6 @@ export default function FilterBar({ filters, setFilters }) {
       toLocal: isoToInput(now.toISOString()),
     }));
   }
-
-  /* ---------- Debounced Apply ---------- */
 
   useEffect(() => {
     if (!validateDates(local.fromLocal, local.toLocal)) return;
@@ -98,31 +92,26 @@ export default function FilterBar({ filters, setFilters }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [local]);
 
-  /* ---------- UI ---------- */
-
   return (
     <div className="space-y-4">
-      {/* Quick pills */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-slate-600">Quick:</span>
+        <span className="text-sm text-slate-600 dark:text-slate-400">Quick:</span>
         {QUICK.map((q) => (
           <button
             key={q.label}
             onClick={() => applyQuick(q)}
-            className={`px-3 py-1 rounded-full text-sm border transition
-              ${
-                activeQuick === q.label
-                  ? "bg-indigo-600 text-white border-indigo-600"
-                  : "bg-white border-slate-300 hover:bg-slate-50"
-              }`}
+            className={`rounded-full border px-3 py-1 text-sm transition ${
+              activeQuick === q.label
+                ? "border-indigo-600 bg-indigo-600 text-white dark:border-sky-500 dark:bg-sky-500"
+                : "border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+            }`}
           >
             {q.label}
           </button>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="grid items-end grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <Input
           placeholder="Search message..."
           value={local.search}
@@ -136,7 +125,7 @@ export default function FilterBar({ filters, setFilters }) {
         />
 
         <select
-          className="h-10 px-3 border rounded-md"
+          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           value={local.level}
           onChange={(e) => setLocal({ ...local, level: e.target.value })}
         >
@@ -149,14 +138,14 @@ export default function FilterBar({ filters, setFilters }) {
 
         <input
           type="datetime-local"
-          className="h-10 px-3 border rounded-md"
+          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           value={local.fromLocal}
           onChange={(e) => setLocal({ ...local, fromLocal: e.target.value })}
         />
 
         <input
           type="datetime-local"
-          className="h-10 px-3 border rounded-md"
+          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           value={local.toLocal}
           onChange={(e) => setLocal({ ...local, toLocal: e.target.value })}
         />
@@ -164,15 +153,12 @@ export default function FilterBar({ filters, setFilters }) {
         <div className="flex items-center gap-2">
           <Checkbox
             checked={local.caseSensitive}
-            onCheckedChange={(v) =>
-              setLocal({ ...local, caseSensitive: !!v })
-            }
+            onCheckedChange={(v) => setLocal({ ...local, caseSensitive: !!v })}
           />
-          <span className="text-sm text-slate-600">Case-sensitive</span>
+          <span className="text-sm text-slate-600 dark:text-slate-400">Case-sensitive</span>
         </div>
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
@@ -191,8 +177,8 @@ export default function FilterBar({ filters, setFilters }) {
         </Button>
 
         {dateError && (
-          <div className="px-3 py-1 text-sm text-red-600 rounded bg-red-50">
-            ⚠️ {dateError}
+          <div className="rounded bg-red-50 px-3 py-1 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-200">
+            {dateError}
           </div>
         )}
       </div>

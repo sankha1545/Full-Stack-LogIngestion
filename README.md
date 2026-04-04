@@ -1,1050 +1,183 @@
-# LogScope 🔍  
-**Real-Time Log Ingestion & Querying System**
+# LogScope
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)\
-[![Frontend Build Status](https://img.shields.io/badge/Frontend-passing-brightgreen)]\
-[![Backend Build Status](https://img.shields.io/badge/Backend-passing-brightgreen)]\
-[![Docker Compose](https://img.shields.io/badge/Docker–Compose-blue)]\
-[![Node.js](https://img.shields.io/badge/Node.js-18.x-green)]\
-[![React](https://img.shields.io/badge/React-18.x-blue)]
+LogScope is a full-stack observability workspace for ingesting, streaming, searching, and analyzing application logs. It combines a React frontend, an Express + Prisma backend, real-time Socket.IO updates, application-scoped API keys, and a small SDK for sending logs from external services.
 
-LogScope is a full-stack, Dockerized log ingestion and querying platform inspired by **Datadog, Grafana Loki, and Splunk**.  
-It allows developers to send logs from any service, persist them in a JSON file, and query them in real time via a rich React UI.
+## What the repo contains
 
----
-## 📑 Table of Contents
+- Multi-page SaaS-style frontend with auth, MFA, settings, analytics, app management, live logs, and dark/light theme support
+- Backend API for authentication, application management, log ingestion, log querying, alerts, saved views, admin analytics, and profile management
+- PostgreSQL-backed Prisma schema for users, applications, logs, API keys, alerts, auth events, and analytics metrics
+- Socket.IO-based live log streaming into the application detail experience
+- Docker support for local containerized runs
+- `logscope-sdk/` package for application-side log shipping
 
-- [Features](#features)
-- [UI Preview](#ui-preview)
-- [Architecture Diagram](#architecture-diagram)
-- [Learn the Technologies Used](#learn-the-technologies-used)
-- [Monorepo Structure](#monorepo-structure)
-- [Project Dependencies](#project-dependencies)
-- [Installation & Setup](#installation)
-- [API Reference](#api-reference)
-- [Filtering Logic](#filtering-logic)
-- [Analytics](#analytics)
-- [Docker Architecture](#docker-architecture)
-- [CI/CD Pipeline](#cicd)
-- [Development (without Docker)](#dev)
-- [Example Test](#testing)
-- [Tech Stack](#tech-stack)
-- [Design Decisions](#design-decisions)
-- [Terminal UI (Future Scope)](#terminal-ui)
-- [Contributing](#contributing)
-- [Author](#author)
+## Quick start
 
+### Docker
 
-<a id="features"></a>
-## 🚀 Features
-
-### 🔹 Backend
-- `POST /logs` — Ingest structured logs  
-- `GET /logs` — Query logs using multiple filters  
-- JSON file datastore (no database)  
-- Atomic file writes + lock protection  
-- Real-time updates via WebSockets (Socket.IO)  
-- Safe schema validation (Zod)  
-
-### 🔹 Frontend
-- Full-text message search (debounced)  
-- Filters:
-  - Level (error, warn, info, debug)
-  - resourceId
-  - Date/time range  
-- AND-combined filtering logic  
-- Real-time log streaming  
-- Color-coded severity indicators  
-- Analytics dashboard (Recharts)  
-
-### 🔹 DevOps
-- Dockerized frontend + backend  
-- `docker compose up` → full stack  
-- GitHub Actions CI/CD → Docker Hub  
-- Nginx static serving for frontend  
-- Volume-backed persistence  
-
----
-<a id="ui-preview"></a>
-## 📸 UI Preview
-
-Below are real screenshots from the LogScope interface, showcasing the dashboard, analytics, and the upcoming terminal UI.
-
-### 📊 Dashboard
-The main control center where logs are streamed, filtered, and inspected in real time.
-**LIGHT MODE**
-
-![Dashboard](images/dashboard-light.png)
-**DARK MODE**
-![Dashboard](images/dashboard-dark.png)
-
-
-### 📈 Analytics View
-Provides visual insights such as log counts by level and real-time trend analysis.
-**LIGHT MODE**
-![Analytics](images/analytics-light.png)
-**DARK MODE**
-![Analytics](images/analytics-dark.png)
-
-### 🖥️ Terminal UI (Future Scope)
-An experimental command-based interface that will allow users to query and analyze logs using CLI-style commands.
-![Terminal UI](images/terminal.png)
-
-### 🪟 Modal View (Log Details)
-Displays the complete structured log data when a user clicks on any log entry.  
-This view allows deep inspection of logs without leaving the dashboard.
- 
-![Modal](images/ModalView.png)
-
------
-
-<a id="architecture-diagram">
-  
-## Architecture Diagram
-![Terminal UI](images/architecture-diagram.png)
-
-
-<a id="learn-the-technologies-used"></a>
-## 📚 Learn the Technologies Used
-
-If you are new to any of the tools used in this project, you can explore their official documentation below:
-
----
-
-### ⚛️ React
-> A JavaScript library for building user interfaces  
-🔗 https://react.dev/
-
----
-
-### 🌐 Node.js
-> JavaScript runtime for building scalable backend services  
-🔗 https://nodejs.org/en/docs
-
----
-
-### 🚀 Express.js
-> Minimal and flexible Node.js web framework  
-🔗 https://expressjs.com/
-
----
-
-### 🔌 Socket.IO
-> Real-time bidirectional communication between client and server  
-🔗 https://socket.io/docs/v4/
-
----
-
-### 📊 Recharts
-> Charting library for React  
-🔗 https://recharts.org/en-US/
-
----
-
-### 🎨 Tailwind CSS
-> Utility-first CSS framework  
-🔗 https://tailwindcss.com/docs
-
----
-
-### 🐳 Docker
-> Platform to build, run, and ship applications in containers  
-🔗 https://docs.docker.com/
-
----
-
-### 🔁 GitHub Actions (CI/CD)
-> Automate build, test, and deployment pipelines  
-🔗 https://docs.github.com/en/actions
-
----
-
-### 🗄️ Nginx
-> High-performance web server for static content  
-🔗 https://nginx.org/en/docs/
-
----
-
-This section helps beginners quickly learn the stack used in **LogScope**.
-
-<a id="monorepo-structure"></a>
-## 📁 Monorepo Structure
-
+From the repo root:
 
 ```bash
-log-ingestion/
-│
-├── .github/
-│   └── workflows/
-│       └── docker-ci.yml
-│
-├── backend/
-│   ├── data/
-│   │   ├── logs.json
-│   │   └── logs.ndjson
-│   │
-│   ├── routes/
-│   │   └── logs.js
-│   │
-│   ├── scripts/
-│   │   └── migrate.js
-│   │
-│   ├── tests/
-│   │   └── logs.test.js
-│   │
-│   ├── server.js
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── package-lock.json
-│   └── .dockerignore
-│
-├── frontend/
-│   ├── public/
-│   │   └── vite.svg
-│   │
-│   ├── src/
-│   │   ├── api/
-│   │   │   └── logsApi.js
-│   │   │
-│   │   ├── services/
-│   │   │   └── socket.js
-│   │   │
-│   │   ├── components/
-│   │   │   ├── FilterBar.jsx
-│   │   │   ├── LogChart.jsx
-│   │   │   ├── LogItem.jsx
-│   │   │   ├── LogsList.jsx
-│   │   │   ├── LogsPanel.jsx
-│   │   │   └── Sidebar.jsx
-│   │   │
-│   │   ├── hooks/
-│   │   │   └── useLogs.js
-│   │   │
-│   │   ├── pages/
-│   │   │   ├── Analytics.jsx
-│   │   │   └── Dashboard.jsx
-│   │   │
-│   │   ├── assets/
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   │
-│   ├── index.html
-│   ├── nginx.conf
-│   ├── Dockerfile
-│   ├── vite.config.js
-│   ├── package.json
-│   ├── package-lock.json
-│   └── .dockerignore
-│
-├── docker-compose.yml
-├── README.md
-└── .gitignore
-```
-<a id="project-dependencies"></a>
-## 📦 Project Dependencies
-
-This project uses modern libraries for real-time communication, UI, validation, and DevOps-ready workflows.
-
----
-
-### 🎨 Frontend Dependencies
-
-| Package | Purpose |
-|--------|---------|
-| react | Core UI library |
-| react-dom | DOM renderer for React |
-| react-router-dom | Client-side routing |
-| framer-motion | Animations & transitions |
-| react-hot-toast | Toast notifications |
-| recharts | Analytics & data visualization |
-| socket.io-client | Real-time log streaming |
-| vite | Frontend build tool |
-| tailwindcss | Utility-first CSS framework |
-| postcss | CSS processing |
-| autoprefixer | Vendor prefixing |
-| eslint | Linting & code quality |
-
----
-
-### 🧠 Backend Dependencies
-
-| Package | Purpose |
-|--------|---------|
-| express | REST API server |
-| cors | Cross-origin support |
-| fs-extra | File system utilities |
-| proper-lockfile | Atomic file locking |
-| socket.io | Real-time WebSocket server |
-| zod | Schema validation |
-
----
-
-### 🛠 Dev & Build Tooling
-
-| Tool | Purpose |
-|------|---------|
-| vite | Fast dev & production builds |
-| eslint | Code linting |
-| tailwindcss | Styling framework |
-| postcss | CSS transformer |
-| GitHub Actions | CI/CD automation |
-| Docker | Containerization |
-| Nginx | Frontend static serving |
-
-<a id="installation"></a>
-## ⚙️ Installation & Setup
-### 1️⃣ Clone
-```
-git clone https://github.com/your-username/logscope.git
-cd log-ingestion
-```
-| Service     | URL                         |
-|------------|-----------------------------|
-| Frontend   | http://localhost:5173       |
-| Backend API| http://localhost:3001/logs  |
-
-### 2️⃣ Docker 
-```
 docker compose up --build
-
 ```
 
-<a id="api-reference"></a>
-## 🔌 API Reference
+Services:
 
-### POST /logs
+- Frontend proxy: `http://localhost:8080`
+- Backend API: `http://localhost:3001`
+- Health check: `http://localhost:3001/health`
 
-Ingest a structured log entry.
+### Local development
 
-#### Request Body
+Backend:
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Typical local URLs:
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3001`
+
+## Core flows
+
+### 1. Create an application
+
+Create an app from the UI after signing in. The backend generates:
+
+- a one-time raw API key
+- a stored hashed key
+- a connection string pointing to `/api/logs/ingest`
+
+### 2. Ingest logs
+
+Send logs to:
+
+```http
+POST /api/logs/ingest
+```
+
+Authenticate with either:
+
+- `Authorization: Bearer <api-key>`
+- `x-api-key: <api-key>`
+- `?key=<api-key>`
+
+Example payload:
 
 ```json
 {
   "level": "error",
-  "message": "DB connection failed",
-  "resourceId": "server-1",
-  "timestamp": "2026-01-24T12:29:34.466Z",
-  "traceId": "t-1769",
-  "spanId": "s-966",
-  "commit": "dev",
-  "metadata": { "host": "prod" }
-}
-```
-### GET /logs (Filters)
-
-Query logs using multiple filters.
-
-#### Example Requests
-```bash
-/logs?level=error&message=db&resourceId=server-1
-/logs?from=2026-01-23T00:00:00Z&to=2026-01-26T00:00:00Z
-```
-<a id="filtering-logic"></a>
-## 🧠 Filtering Logic
-
-All filters use **AND** logic:
-
-```js
-results.filter(log =>
-  matchesLevel &&
-  matchesMessage &&
-  matchesResource &&
-  matchesDateRange
-);
-```
-
-```bash
-/logs?level=error&message=db&resourceId=server-1
-/logs?from=2026-01-23T00:00:00Z&to=2026-01-26T00:00:00Z
-```
-<a id="analytics"></a>
-## 📊 Analytics
-
-- Log count by level
-
-- Uses Recharts
-
-- Auto-updates based on current filters
-
-<a id="docker-architecture"></a>
-## 🐳 Docker Architecture
-```
-[ Browser ]
-     ↓
-[ Frontend (Nginx) ]
-     ↓
-[ Backend (Node.js) ]
-     ↓
-[ logs.json volume ]
-
-```
-<a id="cicd"></a>
-
-## 🔁 CI/CD Pipeline (GitHub Actions + Docker Hub)
-
-This project uses **GitHub Actions** to automatically build, test, and deploy the application whenever code is pushed to the `main` branch.
-
-The pipeline:
-- Builds **Frontend** and **Backend** Docker images
-- Tags them with `latest`
-- Pushes them to **Docker Hub**
-- Can be extended for cloud deployment (AWS, GCP, etc.)
-
----
-
-## 📌 Workflow Trigger
-
-The pipeline runs automatically when:
-
-```txt
-
-Trigger: push to main
-
-```
-### 🔐 GitHub Secrets Setup
-To keep credentials secure, Docker Hub credentials are stored in GitHub Secrets.
-
-#### Required Secrets
-```
-DOCKER_USERNAME
-DOCKER_PASSWORD
-
-```
-### 🧾 Step 1: Create Docker Hub Access Token (Recommended)
-
-Instead of using your real Docker password, generate a Docker Hub Access Token.
-
-### 🔹 How to Generate Docker Hub Token
-
-1) Go to: https://hub.docker.com/
-
-2) Login → Click your profile (top right)
-
-3) Open Account Settings
-
-4) Go to Security
-
-5) Click New Access Token
-
-6) Give it a name (e.g. github-ci)
-
-7) Set permission: Read, Write
-
-8) Click Generate
-
-9) Copy the token (you will see it only once)
-
-### 🧾 Step 2: Add Secrets to GitHub
-1. Open your GitHub repository
-2. Go to Settings → Secrets and variables → Actions
-3. Click New repository secret
-4. Add:
-
-
---------------
-
-## 📄 docker-ci.yml (GitHub Actions Workflow)
-Create this file:
-```
-.github/workflows/docker-ci.yml
-
-```
-### docker-ci.yml
-```
-name: LogScope CI/CD Pipeline
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build Backend Image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/logscope-backend:latest ./backend
-
-      - name: Build Frontend Image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/logscope-frontend:latest ./frontend
-
-      - name: Push Backend Image
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/logscope-backend:latest
-
-      - name: Push Frontend Image
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/logscope-frontend:latest
-
-```
-### How to Test the CI/CD Pipeline
-1. Make any small change in code
-2. Commit and push to main
-
-```
-git add .
-git commit -m "trigger ci"
-git push origin main
-
-```
-3. Go to **GitHub → Actions**
-4. Click the running workflow
-5. Watch logs for:
-- Docker build
-- Docker login
-- Docker push
-
------
-### Result
- After success, your images will be available on Docker Hub:
- 
- ```
- docker pull <your-username>/logscope-backend:latest
-docker pull <your-username>/logscope-frontend:latest
-
- ```
-
-
-
-------
-<a id="dev"></a>
-## 🛠 Development (without Docker)
-### Backend
-```
-cd backend
-npm install
-node server.js
-
-```
-### Frontend
-```
-cd frontend
-npm install
-npm run dev
-
-```
-<a id="testing"></a>
-## 🧪 Testing (How a Beginner Uses LogScope)
-
-This section explains how a **beginner** can send logs and see them live in LogScope.
-
-Think of LogScope as a **live monitor for your app logs**.
-
----
-
-### Step 1: Start LogScope
-
-Make sure LogScope is running:
-
-```bash
-docker compose up --build
-```
-## 🌐 Open the Dashboard
-
-| Service   | URL                           |
-|-----------|-------------------------------|
-| Dashboard | http://localhost:5173         |
-| Log API   | http://localhost:3001/logs    |
-
-### Step 2: Send a Test Log (Linux / macOS / Git Bash)
-
-```
-curl -X POST http://localhost:3001/logs \
-  -H "Content-Type: application/json" \
-  -d '{
-    "level": "error",
-    "message": "Database connection failed",
-    "resourceId": "server-1",
-    "timestamp": "2026-01-24T12:29:34.466Z",
-    "traceId": "t-1001",
-    "spanId": "s-2001",
-    "commit": "main",
-    "metadata": { "host": "prod" }
-  }'
-
-```
-### Expected Response
-```
-{
-  "level": "error",
   "message": "Database connection failed",
-  "resourceId": "server-1",
-  "timestamp": "2026-01-24T12:29:34.466Z",
-  "traceId": "t-1001",
-  "spanId": "s-2001",
-  "commit": "main",
-  "metadata": { "host": "prod" }
-}
-```
-
-------
-
-### Step 3: Send a Test Log (Windows PowerShell)
-```
-curl -Method POST http://localhost:3001/logs `
-  -Headers @{ "Content-Type" = "application/json" } `
-  -Body '{
-    "level": "error",
-    "message": "Database connection failed",
-    "resourceId": "server-1",
-    "timestamp": "2026-01-24T12:29:34.466Z",
-    "traceId": "t-1001",
-    "spanId": "s-2001",
-    "commit": "main",
-    "metadata": { "host": "prod" }
-  }'
-```
-----
-### Step 4: Verify Logs in the UI
-1. Open: http://localhost:5173
-2. Set filters:
-    - **Level:** error
-    - **Resource:** server-1
-
-3. You should see:
-  Database connection failed
-
-appear 
-
-appear instantly without refreshing.
-
-----
-
-### Step 5: Verify Logs via API
-Get all logs:
-```
-curl http://localhost:3001/logs
-
-```
-Filter by level:
-
-```
-curl "http://localhost:3001/logs?level=error"
-
-```
-Filter by message:
-
-```
-curl "http://localhost:3001/logs?message=database"
-
-```
-Filter by resource:
-
-```
-curl "http://localhost:3001/logs?resourceId=server-1"
-
-```
-Filter by date:
-```
-curl "http://localhost:3001/logs?from=2026-01-24T00:00:00Z&to=2026-01-25T00:00:00Z"
-
-```
----
-### What This Confirms
-- Log ingestion works
-- Real-time streaming works
-- Filters work
-- UI is connected to backend
-
----
-### 🔗 Connecting Your Own App to LogScope
-
-To send logs automatically from your **own app**, create a small helper file.
-
-### Step 6: Add Logger File to Your App
-
-Create a file :
-
-```
-// logscopeLogger.js
-export async function logToLogScope(level, message, resourceId, metadata = {}) {
-  try {
-    await fetch("http://localhost:3001/logs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        level,
-        message,
-        resourceId,
-        timestamp: new Date().toISOString(),
-        traceId: "trace-" + Date.now(),
-        spanId: "span-" + Math.random().toString(36).slice(2),
-        commit: "v1.0",
-        metadata
-      })
-    });
-  } catch (err) {
-    console.error("LogScope not reachable", err);
+  "timestamp": "2026-04-04T10:15:00.000Z",
+  "resourceId": "auth-service",
+  "traceId": "trace-123",
+  "spanId": "span-456",
+  "service": "api",
+  "environment": "production",
+  "host": "node-1",
+  "version": "1.4.2",
+  "tags": ["payments", "critical"],
+  "metadata": {
+    "region": "ap-south-1"
   }
 }
-
-```
----
-### Step 7: Use It in Your App (Like console.log)
-
-```
-import { logToLogScope } from "./logscopeLogger.js";
-
-logToLogScope("info", "User logged in", "auth-service");
-logToLogScope("error", "DB connection failed", "db-service");
-
-```
-## 🤖 Automated Testing (Jest + Supertest)
-
-LogScope also includes a **minimal automated test suite** to validate the backend API.
-
-These tests ensure that:
-- Invalid logs are rejected
-- Valid logs are accepted
-- Filters work correctly
-- Time range filtering behaves as expected
-
-The tests are written using:
-- **Jest** → test runner
-- **Supertest** → HTTP request simulation for Express
-
----
-
-### Test Location
-
-All tests are located at:
-
-```
-backend/tests/logs.test.js
-
 ```
 
----
+### 3. Query logs
 
-### What Is Being Tested?
+Use:
 
-The test suite covers:
+```http
+GET /api/logs?applicationId=<app-id>
+```
 
-#### 1. POST /logs
-- Rejects invalid payload
-- Accepts valid structured log
+Supported filters include:
 
-#### 2. GET /logs
-- Filters by log level
-- Filters by date range
+- `level`
+- `search`
+- `resourceId`
+- `from`
+- `to`
+- `traceId`
+- `spanId`
+- `commit`
+- `service`
+- `environment`
+- `page`
+- `limit`
 
-These are **integration tests**, meaning they test the real API routes end-to-end.
+### 4. View live updates
 
----
+After auth, the frontend connects to Socket.IO and joins application rooms. New ingested logs are emitted in real time to the matching application workspace.
 
-### How to Run the Tests
+## Repository structure
 
-Go to the backend directory:
+```text
+.
+├── backend/        Express API, Prisma schema, jobs, routes, auth, services
+├── frontend/       React + Vite UI
+├── logscope-sdk/   Lightweight JS SDK for log shipping
+├── scripts/        Helper scripts such as sample log senders
+├── images/         Documentation and marketing images
+└── docs/           Project documentation
+```
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [API Reference](docs/API.md)
+- [Development Guide](docs/DEVELOPMENT.md)
+- [SDK Guide](docs/SDK.md)
+- [Frontend Notes](frontend/README.md)
+
+## Important environment variables
+
+Backend commonly expects:
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
+- `FRONTEND_URL`
+- `BACKEND_URL`
+- `API_KEY_SECRET`
+- `MFA_ENCRYPTION_KEY`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+- `LOGSCOPE_INGEST_URL`
+- `REFRESH_TOKEN_DAYS`
+- `REFRESH_TOKEN_BYTES`
+- `TRUST_DEVICE_DAYS`
+- `OTP_EXP_MINUTES`
+
+## Verification
+
+Recent frontend verification command:
 
 ```bash
-cd backend
-```
-Install dependencies (if not already installed):
-
-```
-npm install
-
-```
-Run tests:
-
-```
-npm test
-
-```
-----
-**Expected Output**
-```
-PASS tests/logs.test.js
- POST /logs
-   ✓ should reject invalid payload
-   ✓ should accept valid log
- GET /logs
-   ✓ should filter by level
-   ✓ should filter by date range
-
-Test Suites: 1 passed, 1 total
-Tests: 4 passed, 4 total
-
-```
-----
-**How the Tests Work Internally**
-Before each test, the log storage file is reset:
-
-```
-beforeEach(async () => {
-  await fs.outputFile(LOG_FILE, "");
-});
-
-```
-This ensures:
-
-- Each test runs on a clean dataset
-
-- No previous logs affect the results
-
-- Tests are deterministic and isolated
-----
-**Why This Is Important**
-These tests prove that:
-
-- The API behaves correctly
-
-- Validation logic works
-
-- NDJSON storage works
-
-- Filtering logic is reliable
-
-- This makes LogScope production-ready and testable.
-
-### Manual vs Automated Testing
-
-| Type                | Purpose                          |
-|---------------------|----------------------------------|
-| Manual (curl / UI)  | For beginners and demos          |
-| Automated (Jest)    | For regression testing and CI    |
-
-------
-
-<a id="tech-stack"></a>
-## 🧩 Tech Stack
-
-| Layer     | Tech                                   |
-|-----------|----------------------------------------|
-| Backend   | Node.js, Express, Zod, fs-extra         |
-| Realtime  | Socket.IO                              |
-| Frontend  | React, Vite, Tailwind, Recharts         |
-| DevOps    | Docker, Compose, GitHub Actions         |
-| Storage   | JSON File                              |
-
-<a id="design-decisions"></a>
-## 📌 Design Decisions
-
-- JSON DB → matches assessment constraints
-
-- Atomic writes → prevents corruption
-
-- WebSockets → real-time observability
-
-- Monorepo → easier CI/CD and reuse
-
-<a id="terminal-ui"></a>
-## 🖥️ Terminal UI (Experimental & Future Scope)
-
-LogScope includes an **experimental terminal-style interface** designed to behave like a real command-line log console — similar to tools found in **Grafana, Splunk, and Datadog**.
-
-This terminal will allow users to **type commands, run log queries, filter streams, and inspect analytics directly from a web-based shell**.
-
----
-
-### 🎯 Goal
-
-Provide a **fully interactive, browser-based terminal** where users can:
-
-- Query logs using CLI commands  
-- Stream logs in real time  
-- Run analytics commands  
-- Navigate log history  
-- Export filtered results  
-
-Example:
-```bash
-logscope> level:error resource:server-1 last:10m
-logscope> stats by level
-logscope> export csv
-
-```
-## 🧠 Future Scope: Virtual Command Runtime
-To make the terminal safe, powerful, and extensible, LogScope will use a virtual execution layer instead of running commands directly on the host system.
-
-This requires a sandboxed Virtual Machine environment.
-
-### 🏗️ Terminal Architecture (Proposed)
-```
-[ Web Terminal (React) ]
-        ↓
-[ Command Parser ]
-        ↓
-[ Secure Command Router ]
-        ↓
-[ Virtual Execution Layer ]
-        ↓
-[ VM / Sandbox Runtime ]
-        ↓
-[ Log Engine + Analytics Core ]
-
-```
-### 🔐 Why a Virtual Machine?
-A VM or sandbox is required to:
-
-- Prevent OS-level command execution
-
-- Isolate user input
-
-- Allow safe scripting
-
-- Scale across environments
-
-- Support future plugins
-
-### 🛠️ Technologies (Planned)
-| Layer         | Tool                     |
-|---------------|--------------------------|
-| Terminal UI   | xterm.js, React          |
-| Command Parser| Node.js                  |
-| Runtime       | Docker VM / Firecracker |
-| Isolation     | Linux namespaces         |
-| Transport     | WebSockets               |
-| Security      | Policy-based execution  |
-
----
-### 🚀 Roadmap
-
-- [x] UI shell prototype  
-- [ ] Command grammar  
-- [ ] Virtual runtime sandbox  
-- [ ] CLI analytics commands  
-- [ ] Plugin support  
-
------
-## 🔐 Future Scope: Authentication & Enterprise SaaS Platform
-
-To make LogScope a **multi-tenant, enterprise-ready SaaS**, the platform will introduce:
-
-- Secure user authentication
-- Organization & team management
-- Role-based access control (RBAC)
-- Audit logs and usage analytics
-- API tokens for log ingestion
-
----
-
-### 🏗️ Authentication & SaaS Architecture (Proposed)
-```
-[ Web App (React) ]
-↓
-[ Auth Gateway ]
-↓
-[ Identity Provider ]
-↓
-[ User & Org Service ]
-↓
-[ RBAC + Policy Engine ]
-↓
-[ Log Ingestion API ]
-↓
-[ Tenant-Isolated Log Store ]
-↓
-[ Analytics + Dashboards ]
-
+cd frontend
+npm run build
 ```
 
----
+## Notes
 
-### 🔑 Core Features (Planned)
-
-- Email & OAuth login (Google, GitHub)
-- Organization / Workspace system
-- Role-based permissions:
-  - Admin
-  - Developer
-  - Viewer
-- API keys per project
-- Secure session & JWT token handling
-- Rate limiting per tenant
-- Audit trail for user actions
-
----
-
-### 🛠️ Technologies (Planned)
-
-| Layer              | Tool                         |
-|--------------------|------------------------------|
-| Auth UI            | React, Tailwind              |
-| Auth Backend       | Node.js, Express             |
-| Identity Provider  | JWT / OAuth / Auth0          |
-| Database           | PostgreSQL / Prisma          |
-| Session Security   | HttpOnly cookies, JWT        |
-| RBAC Engine        | Policy-based middleware      |
-| API Security       | API keys + rate limiting     |
-
----
-
-### 🔄 SaaS User Flow
-
-```
-User → Login → Select Org → Access Logs
-↓
-RBAC Check
-↓
-Authorized APIs
-↓
-Tenant Log Store
-↓
-Analytics Dashboard
-
-```
-
----
-
-### 🌐 Multi-Tenant Isolation Model
-
-| Level | Isolation |
-|-------|-----------|
-| Org   | Separate log namespaces |
-| Team  | Permission-based access |
-| User  | Role-specific controls  |
-
----
-
-### 🚀 SaaS Roadmap
-
-- [ ] Login / Signup system  
-- [ ] Organization & workspace support  
-- [ ] RBAC policies  
-- [ ] API keys for log ingestion  
-- [ ] Billing & usage metering  
-- [ ] SSO (Google, GitHub)  
-- [ ] Audit logs  
-- [ ] Admin control panel  
-
----
-
-This will transform LogScope into a **secure, multi-tenant, enterprise observability SaaS platform**.
-
-
-<a id="contributing"></a>
-## 👥 Contributing
-
-1) Fork
-
-2) Create branch
-
-3) Commit
-
-4) PR
-
-<a id="author"></a>
-## 📞 Author
-
-**Sankha Subhra Das**
-- Portfolio: [https://www.sankhasubhradasportfolio.in/]
-- GitHub: [https://github.com/sankha1545]
-- Email - [sankhasubhradas1@gmail.com]
-- LinkedIn - [https://www.linkedin.com/in/sankha-subhra-das-625ab6201/]
-
-**“Logs are the heartbeat of production systems.”**
-
+- `docker-compose.yml` currently exposes the frontend through Nginx on port `8080`, not `5173`
+- The repo includes older files and routes in a few areas; this README documents the current active application shape rather than historical iterations

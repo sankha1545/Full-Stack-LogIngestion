@@ -152,25 +152,25 @@ export default function Dashboard() {
       </section>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
           Failed to load applications: {error}
         </div>
       )}
 
       <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <div className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-[0_24px_60px_rgba(2,6,23,0.35)]">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-xl font-semibold text-slate-950">Applications</h3>
-              <p className="text-sm text-slate-500">A cleaner, more standard card layout with direct access to each app.</p>
+              <h3 className="text-xl font-semibold text-slate-950 dark:text-slate-50">Applications</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">A cleaner, more standard card layout with direct access to each app.</p>
             </div>
             <Button variant="outline" className="rounded-2xl" onClick={() => navigate("/applications")}>View all</Button>
           </div>
 
           {loading ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-500">Loading applications...</div>
+            <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">Loading applications...</div>
           ) : apps.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-500">
+            <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">
               No applications yet. Create your first app to start sending logs.
             </div>
           ) : (
@@ -182,10 +182,10 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-[0_24px_60px_rgba(2,6,23,0.35)]">
           <div>
-            <h3 className="text-xl font-semibold text-slate-950">Recent focus</h3>
-            <p className="text-sm text-slate-500">Surface the most relevant apps and next actions without making users hunt.</p>
+            <h3 className="text-xl font-semibold text-slate-950 dark:text-slate-50">Recent focus</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Surface the most relevant apps and next actions without making users hunt.</p>
           </div>
 
           <div className="space-y-3">
@@ -194,23 +194,23 @@ export default function Dashboard() {
                 <button
                   key={app.id}
                   onClick={() => navigate(`/applications/${app.id}`)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/60"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/60 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-sky-500/40 dark:hover:bg-slate-900/90"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="font-medium text-slate-900">{app.name}</div>
-                      <div className="mt-1 text-sm text-slate-500">{app.environment}</div>
+                      <div className="font-medium text-slate-900 dark:text-slate-100">{app.name}</div>
+                      <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">{app.environment}</div>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-slate-400" />
+                    <ArrowRight className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                   </div>
                 </button>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-sm text-slate-500">Recent applications will appear here once created.</div>
+              <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Recent applications will appear here once created.</div>
             )}
           </div>
 
-          <div className="rounded-2xl bg-slate-950 p-5 text-white">
+          <div className="rounded-2xl bg-slate-950 p-5 text-white dark:bg-slate-900 dark:ring-1 dark:ring-white/10">
             <div className="text-sm font-semibold">UX upgrade highlights</div>
             <ul className="mt-3 space-y-2 text-sm text-slate-300">
               <li>Clearer hierarchy and spacing across the dashboard shell.</li>

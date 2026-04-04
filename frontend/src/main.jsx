@@ -9,6 +9,8 @@ import { HeroUIProvider } from "@heroui/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { AuthProvider } from "./context/AuthContext";
+import { AppStatusProvider } from "./context/AppStatusContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import RequireAuth from "./auth/RequireAuth";
 import App from "./App";
 
@@ -36,21 +38,17 @@ import SecuritySettings from "@/components/settings/SecuritySettings";
 import AppearanceSettings from "@/components/settings/AppearanceSettings";
 import NotificationsSettings from "./components/settings/NotificationsSettings";
 
-/* Loader & interceptors */
 import { LoaderProvider, useLoader } from "@/components/Loader/LoaderContext";
 import api from "@/api/api";
 import { setupInterceptors } from "@/api/setupInterceptors";
 
-/* Global Toaster (single instance) */
-import { Toaster } from "react-hot-toast";
+import AppErrorBoundary from "@/components/app/AppErrorBoundary";
+import AppFallbackScreen from "@/components/app/AppFallbackScreen";
+import AppLoadingScreen from "@/components/app/AppLoadingScreen";
+import ThemeAwareToaster from "@/components/ThemeAwareToaster";
 
-/* Lazy route */
-const Docs = lazy(() =>
-  import("@/components/landingpage/HowitWorks/docs/Docs")
-);
+const Docs = lazy(() => import("@/components/landingpage/HowitWorks/docs/Docs"));
 
-/* InterceptorInitializer: a small component that wires axios interceptors.
-   It uses the useLoader hook (so it MUST be rendered inside LoaderProvider). */
 function InterceptorInitializer() {
   const { setLoading } = useLoader();
 
@@ -64,82 +62,78 @@ function InterceptorInitializer() {
   return null;
 }
 
-/* App render */
 createRoot(document.getElementById("root")).render(
   <HeroUIProvider>
-    <AuthProvider>
-      <LoaderProvider>
-        <TooltipProvider delayDuration={150}>
-          <BrowserRouter>
-            {/* Initialize axios interceptors once (inside LoaderProvider) */}
-            <InterceptorInitializer />
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <LoaderProvider>
+            <AppStatusProvider>
+              <TooltipProvider delayDuration={150}>
+                <BrowserRouter>
+                  <InterceptorInitializer />
 
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center h-screen text-slate-500">
-                  <div className="text-sm animate-pulse">Loading…</div>
-                </div>
-              }
-            >
-              <Routes>
-                {/* PUBLIC */}
-                <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/create-account" element={<CreateAccount />} />
-                <Route path="/contact" element={<ContactSales />} />
-                <Route path="/docs" element={<Docs />} />
-                <Route path="/oauth/callback" element={<OAuthCallback />} />
-                <Route path="/mfa-verify" element={<MFAChallenge />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/forgot-password/verify" element={<VerifyOtp />} />
-                <Route path="/forgot-password/reset" element={<ResetPassword />} />
+                  <Suspense
+                    fallback={
+                      <AppLoadingScreen
+                        title="Loading page"
+                        message="This route is taking a moment to load. We are getting it ready for you."
+                      />
+                    }
+                  >
+                    <Routes>
+                      <Route path="/" element={<Landing />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/signup" element={<Signup />} />
+                      <Route path="/create-account" element={<CreateAccount />} />
+                      <Route path="/contact" element={<ContactSales />} />
+                      <Route path="/docs" element={<Docs />} />
+                      <Route path="/oauth/callback" element={<OAuthCallback />} />
+                      <Route path="/mfa-verify" element={<MFAChallenge />} />
+                      <Route path="/forgot-password" element={<ForgotPassword />} />
+                      <Route path="/forgot-password/verify" element={<VerifyOtp />} />
+                      <Route path="/forgot-password/reset" element={<ResetPassword />} />
 
-                {/* PROTECTED */}
-                <Route element={<RequireAuth />}>
-                  <Route element={<App />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/applications" element={<Applications />} />
-                    <Route path="/applications/:id" element={<AppDetail />} />
+                      <Route element={<RequireAuth />}>
+                        <Route element={<App />}>
+                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/analytics" element={<Analytics />} />
+                          <Route path="/applications" element={<Applications />} />
+                          <Route path="/applications/:id" element={<AppDetail />} />
 
-                    <Route path="/settings" element={<SettingsLayout />}>
-                      <Route index element={<ProfileSettings />} />
-                      <Route path="profile" element={<ProfileSettings />} />
-                      <Route path="security" element={<SecuritySettings />} />
-                      <Route path="appearance" element={<AppearanceSettings />} />
-                      <Route path="notifications" element={<NotificationsSettings />} />
-                    </Route>
-                  </Route>
-                </Route>
+                          <Route path="/settings" element={<SettingsLayout />}>
+                            <Route index element={<ProfileSettings />} />
+                            <Route path="profile" element={<ProfileSettings />} />
+                            <Route path="security" element={<SecuritySettings />} />
+                            <Route path="appearance" element={<AppearanceSettings />} />
+                            <Route path="notifications" element={<NotificationsSettings />} />
+                          </Route>
+                        </Route>
+                      </Route>
 
-                {/* FALLBACK */}
-                <Route
-                  path="*"
-                  element={
-                    <div className="flex items-center justify-center h-screen text-slate-500">
-                      Page not found
-                    </div>
-                  }
-                />
-              </Routes>
-            </Suspense>
+                      <Route
+                        path="*"
+                        element={
+                          <AppFallbackScreen
+                            title="Page not found"
+                            message="The page you tried to open does not exist or may have been moved."
+                            actionLabel="Go home"
+                            onRetry={() => {
+                              window.location.href = "/";
+                            }}
+                          />
+                        }
+                      />
+                    </Routes>
+                  </Suspense>
 
-            {/* GLOBAL TOASTER (single instance for the whole app) */}
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: "#fff",
-                  color: "#0f172a",
-                  border: "1px solid #e2e8f0",
-                },
-              }}
-            />
-          </BrowserRouter>
-        </TooltipProvider>
-      </LoaderProvider>
-    </AuthProvider>
+                  <ThemeAwareToaster />
+                </BrowserRouter>
+              </TooltipProvider>
+            </AppStatusProvider>
+          </LoaderProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </AppErrorBoundary>
   </HeroUIProvider>
 );
