@@ -5,15 +5,17 @@
 Local development:
 
 - Backend: `http://localhost:3001`
-- Frontend proxy via Docker: `http://localhost:8080`
+- Frontend via Docker: `http://localhost:8080`
 
-Most API routes are prefixed with `/api`.
+Most endpoints are available under `/api`.
 
 ## Health
 
 - `GET /health`
 
 ## Authentication
+
+Main auth routes:
 
 - `POST /api/auth/login`
 - `POST /api/auth/mfa/verify`
@@ -46,13 +48,13 @@ Most API routes are prefixed with `/api`.
 - `POST /api/apps/:id/rotate`
 - `DELETE /api/apps/:id`
 
-Application creation returns a one-time API key and a connection string for ingestion.
+Creating an application returns a one-time API key and a connection string for ingestion.
 
 ## Logs
 
 ### `POST /api/logs/ingest`
 
-Authentication methods:
+Authentication options:
 
 - `Authorization: Bearer <api-key>`
 - `x-api-key: <api-key>`
@@ -82,7 +84,7 @@ Example payload:
 
 ### `GET /api/logs`
 
-Required query:
+Required query parameter:
 
 - `applicationId`
 
@@ -121,4 +123,4 @@ Socket.IO path:
 
 Main live event:
 
-- server emits `new_log`
+- `new_log`

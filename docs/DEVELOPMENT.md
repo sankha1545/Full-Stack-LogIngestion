@@ -5,9 +5,9 @@
 - Node.js 18+ or 20+
 - npm
 - PostgreSQL
-- Docker and Docker Compose if running containers
+- Docker and Docker Compose for containerized runs
 
-## Local development
+## Run locally
 
 ### Backend
 
@@ -41,22 +41,20 @@ Useful frontend scripts:
 - `npm run lint`
 - `npm run preview`
 
-## Docker
-
-Repo-level compose:
+## Run with Docker
 
 ```bash
 docker compose up --build
 ```
 
-Current exposed ports:
+Ports:
 
-- frontend proxy: `8080`
-- backend API: `3001`
+- frontend: `8080`
+- backend: `3001`
 
 ## Environment variables
 
-Minimum backend set:
+Minimum backend configuration:
 
 ```env
 DATABASE_URL=postgresql://...
@@ -66,7 +64,7 @@ BACKEND_URL=http://localhost:3001
 API_KEY_SECRET=change-me
 ```
 
-Additional environment variables used in code:
+Additional backend variables used in the project:
 
 - `JWT_EXPIRES_IN`
 - `REFRESH_TOKEN_DAYS`
@@ -92,9 +90,7 @@ Additional environment variables used in code:
 
 ## Database
 
-The backend uses Prisma with PostgreSQL.
-
-Key schema file:
+Prisma schema:
 
 - `backend/prisma/schema.prisma`
 
@@ -115,15 +111,17 @@ cd backend
 npm test
 ```
 
-Frontend build verification:
+Frontend build:
 
 ```bash
 cd frontend
 npm run build
 ```
 
-## Sample logs
+## Sample log sender
 
-PowerShell helper:
+A basic PowerShell example is available at:
 
 - `scripts/send-Logs.ps1`
+
+Use it to verify ingestion quickly during local development.

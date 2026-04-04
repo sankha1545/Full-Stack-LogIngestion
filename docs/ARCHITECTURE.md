@@ -2,53 +2,70 @@
 
 ## Overview
 
-LogScope is split into three primary layers:
+LogScope has three main parts:
 
-1. `frontend/` renders the SaaS UI for auth, application management, live logs, analytics, settings, and admin-facing flows.
-2. `backend/` exposes REST endpoints, handles auth and permissions, persists data with Prisma/PostgreSQL, and emits live log events through Socket.IO.
-3. `logscope-sdk/` provides a lightweight client for external applications to ship logs to the ingestion API.
+1. `frontend/` renders the product UI for authentication, applications, logs, analytics, and settings.
+2. `backend/` provides the API, authentication, access control, ingestion, and realtime streaming.
+3. `logscope-sdk/` provides a lightweight way for external services to send logs into LogScope.
 
-## High-level flow
+## Request flow
 
 ```text
-Integrated app / SDK
+External app or SDK
         |
         v
 POST /api/logs/ingest
         |
         v
-Express route validation + API key lookup
+API key validation
         |
         v
-Prisma -> PostgreSQL
+Prisma + PostgreSQL persistence
         |
         +--> analytics aggregation
         |
-        +--> Socket.IO room emit (app:<applicationId>)
+        +--> Socket.IO event to application room
                          |
                          v
-              React live log workspace
+                 Frontend live log view
 ```
 
-## Frontend architecture
+## Frontend
 
-Main frontend concerns:
+Important areas:
 
-- `src/main.jsx`: app bootstrap, providers, routing
-- `src/App.jsx`: authenticated shell and workspace layout
-- `src/context/`: shared auth and theme state
-- `src/pages/`: route-level pages such as dashboard, analytics, applications, and app detail
+- `src/main.jsx`: application bootstrap, providers, routing
+- `src/App.jsx`: authenticated shell
+- `src/context/`: auth, theme, and app status context
+- `src/pages/`: route-level pages
 - `src/components/`: reusable UI and feature components
-- `src/hooks/useLogs.js`: log fetching and live socket subscription behavior
-- `src/services/socket.js`: Socket.IO client setup
+- `src/hooks/useLogs.js`: live log fetching and subscription logic
+- `src/services/socket.js`: Socket.IO client
 
-## Backend architecture
+Main user workflows:
 
-Main backend entrypoint:
+- authentication and MFA
+- application creation and credential handling
+- live log viewing and filtering
+- analytics and charts
+- settings and profile management
+
+## Backend
+
+Entrypoint:
 
 - `backend/server.js`
 
-Important route groups:
+Main responsibilities:
+
+- middleware setup
+- route registration
+- JWT and OAuth integration
+- Socket.IO server setup
+- application room subscriptions
+- graceful shutdown
+
+Main route groups:
 
 - `routes/auth.js`
 - `routes/oauth.js`
@@ -63,30 +80,35 @@ Important route groups:
 
 ## Data model
 
-The Prisma schema models users, profiles, applications, members, API keys, logs, metrics, alerts, audit events, refresh tokens, trusted devices, recovery codes, and contact requests.
+The Prisma schema includes:
+
+- users and profiles
+- applications and members
+- API keys
+- logs and aggregated metrics
+- alerts
+- audit and auth-related records
 
 Core relationships:
 
-- a `User` owns many `Application` records
-- an `Application` has many `ApiKey`, `Log`, `LogMetric`, and `AlertRule` records
-- `AppMember` allows shared application access
-- logs are tenant-scoped by `applicationId`
+- one user can own many applications
+- one application can have many logs, API keys, metrics, and alert rules
+- logs are always scoped to an application
 
-## Realtime model
+## Realtime
 
-Socket.IO is mounted in `backend/server.js`.
+Socket.IO is used for live log updates.
 
 Flow:
 
-1. frontend authenticates socket using JWT
-2. frontend requests `join_application`
-3. backend verifies the user can access the application
-4. socket joins room `app:<applicationId>`
-5. ingestion route emits `new_log` into that room
+1. frontend authenticates the socket
+2. frontend joins an application room
+3. backend verifies access
+4. backend emits new log events to that room during ingestion
 
-## Deployment shape
+## Deployment
 
-Current repo-level Docker Compose:
+Current Docker Compose setup exposes:
 
-- backend container on `3001`
+- backend on `3001`
 - frontend Nginx proxy on `8080`
